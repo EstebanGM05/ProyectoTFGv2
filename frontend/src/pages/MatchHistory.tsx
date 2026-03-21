@@ -42,6 +42,43 @@ interface PlayerData {
   damage: number;
 }
 
+const getTeamStyle = (colorClass: string) => {
+  switch (colorClass) {
+    case 'team-blue': return 'bg-gradient-to-br from-blue-900/60 to-blue-900/20 border-2 border-blue-500/30';
+    case 'team-red': return 'bg-gradient-to-br from-red-900/60 to-red-900/20 border-2 border-red-500/30';
+    case 'pool-yellow': return 'bg-gradient-to-br from-yellow-900/60 to-yellow-900/20 border-2 border-yellow-500/30';
+    case 'pool-blue': return 'bg-gradient-to-br from-sky-900/60 to-sky-900/20 border-2 border-sky-500/30';
+    case 'pool-red': return 'bg-gradient-to-br from-rose-900/60 to-rose-900/20 border-2 border-rose-500/30';
+    case 'pool-green': return 'bg-gradient-to-br from-green-900/60 to-green-900/20 border-2 border-green-500/30';
+    case 'pool-orange': return 'bg-gradient-to-br from-orange-900/60 to-orange-900/20 border-2 border-orange-500/30';
+    case 'pool-purple': return 'bg-gradient-to-br from-purple-900/60 to-purple-900/20 border-2 border-purple-500/30';
+    case 'pool-pink': return 'bg-gradient-to-br from-pink-900/60 to-pink-900/20 border-2 border-pink-500/30';
+    case 'pool-aquamarine': return 'bg-gradient-to-br from-teal-900/60 to-teal-900/20 border-2 border-teal-500/30';
+    default: return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-600/30';
+  }
+};
+
+const getTeamHeaderColor = (colorClass: string) => {
+  switch (colorClass) {
+    case 'team-blue': return 'text-blue-300';
+    case 'team-red': return 'text-red-300';
+    case 'pool-yellow': return 'text-yellow-300';
+    case 'pool-blue': return 'text-sky-300';
+    case 'pool-red': return 'text-rose-300';
+    case 'pool-green': return 'text-green-300';
+    case 'pool-orange': return 'text-orange-300';
+    case 'pool-purple': return 'text-purple-300';
+    case 'pool-pink': return 'text-pink-300';
+    case 'pool-aquamarine': return 'text-teal-300';
+    default: return 'text-gray-300';
+  }
+};
+
+const getChampionImage = (champName: string) => {
+  const name = champName === 'FiddleSticks' ? 'Fiddlesticks' : champName;
+  return `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${name}.png`;
+};
+
 export default function MatchHistory() {
   const [gameName, setGameName] = useState('');
   const [tagLine, setTagLine] = useState('');
@@ -60,10 +97,11 @@ export default function MatchHistory() {
     setExpandedMatchIndex(expandedMatchIndex === idx ? null : idx);
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!gameName || !tagLine) return;
+  const performSearch = async (name: string, tag: string) => {
+    if (!name || !tag) return;
     
+    setGameName(name);
+    setTagLine(tag);
     setLoading(true);
     setError('');
     setData(null);
@@ -72,15 +110,21 @@ export default function MatchHistory() {
     
     try {
       const res = await axios.post('/api/match-history', {
-        game_name: gameName,
-        tag_line: tagLine
+        game_name: name,
+        tag_line: tag
       });
       setData(res.data);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al buscar el historial');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(gameName, tagLine);
   };
 
   const winrateKeys = data ? Object.keys(data.winrates).sort((a,b) => new Date(b).getTime() - new Date(a).getTime()) : [];
@@ -242,7 +286,7 @@ export default function MatchHistory() {
                   >
                     <div className="flex items-center w-full sm:w-auto mb-3 sm:mb-0">
                       <img 
-                        src={`https://ddragon.leagueoflegends.com/cdn/14.5.1/img/champion/${m.championName}.png`} 
+                        src={getChampionImage(m.championName)} 
                         alt={m.championName}
                         className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl shadow-md border-2 border-black/50 mr-4"
                         onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=?' }}
@@ -267,63 +311,80 @@ export default function MatchHistory() {
                   {/* Expanded Section */}
                   {expandedMatchIndex === idx && m.teams && (
                     <div className="bg-black/60 p-4 sm:p-6 border-t font-sans border-white/5 text-sm rounded-b-xl shadow-[inset_0_10px_30px_rgba(0,0,0,0.5)]">
-                      <div className="flex flex-col xl:flex-row gap-6">
+                      <div className={`grid gap-4 sm:gap-6 ${m.gameMode === 'CHERRY' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4' : 'grid-cols-1 xl:grid-cols-2'}`}>
                         {m.teams.map((team, tIdx) => (
-                          <div key={tIdx} className={`flex-1 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all relative overflow-hidden ${team.color_class === 'team-blue' ? 'bg-gradient-to-br from-blue-900/60 to-blue-900/20 border-2 border-blue-500/30' : team.color_class === 'team-red' ? 'bg-gradient-to-br from-red-900/60 to-red-900/20 border-2 border-red-500/30' : 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-600/30'}`}>
+                          <div key={tIdx} className={`flex-1 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all relative overflow-hidden ${getTeamStyle(team.color_class)}`}>
                             
                             {/* Team Header */}
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-3 relative z-10 w-full">
-                              <h5 className={`text-xl font-black tracking-wider drop-shadow-md ${team.color_class === 'team-blue' ? 'text-blue-300' : team.color_class === 'team-red' ? 'text-red-300' : 'text-gray-300'}`}>
+                              <h5 className={`text-xl font-black tracking-wider drop-shadow-md ${getTeamHeaderColor(team.color_class)}`}>
                                 {team.id} <span className="text-white ml-3 py-1 px-4 bg-black/60 rounded-full text-sm font-bold shadow-sm">{team.total_kills} Kills</span>
                               </h5>
-                              <div className="text-xs sm:text-sm font-bold bg-black/60 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-gray-200 flex flex-wrap gap-2 sm:gap-4 shadow-sm border border-white/10 backdrop-blur-md">
-                                <span title="Torretas" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🗼</span> <span className="text-white">{team.objectives.tower || 0}</span></span>
-                                <span title="Dragones" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🐉</span> <span className="text-white">{team.objectives.dragon || 0}</span></span>
-                                <span title="Barones" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">👾</span> <span className="text-white">{team.objectives.baron || 0}</span></span>
-                                <span title="Heraldos/Hordas" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🐛</span> <span className="text-white">{(team.objectives.riftHerald || 0) + (team.objectives.horde || 0)}</span></span>
-                              </div>
+                              {m.gameMode !== 'CHERRY' && (
+                                <div className="text-xs sm:text-sm font-bold bg-black/60 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-gray-200 flex flex-wrap gap-2 sm:gap-4 shadow-sm border border-white/10 backdrop-blur-md">
+                                  <span title="Torretas" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🗼</span> <span className="text-white">{team.objectives.tower || 0}</span></span>
+                                  <span title="Dragones" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🐉</span> <span className="text-white">{team.objectives.dragon || 0}</span></span>
+                                  <span title="Barones" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">👾</span> <span className="text-white">{team.objectives.baron || 0}</span></span>
+                                  <span title="Heraldos/Hordas" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🐛</span> <span className="text-white">{(team.objectives.riftHerald || 0) + (team.objectives.horde || 0)}</span></span>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Team Table */}
-                            <div className="overflow-x-auto pb-2 relative z-10 w-full">
-                              <table className="w-full text-left border-collapse min-w-[450px]">
+                            <div className="overflow-x-auto pb-2 relative z-10 w-full flex-grow">
+                              <table className={`w-full text-left border-collapse ${m.gameMode === 'CHERRY' ? 'min-w-0' : 'min-w-[450px]'}`}>
                                 <thead>
                                   <tr className="text-gray-400 border-b-2 border-white/10 text-xs uppercase tracking-widest bg-black/40">
-                                    <th className="py-3 pl-3 rounded-tl-xl w-5/12">Jugador</th>
-                                    <th className="py-3 text-center w-3/12">KDA</th>
-                                    <th className="py-3 text-center w-2/12">Daño</th>
-                                    <th className="py-3 text-right pr-3 rounded-tr-xl w-2/12">Oro/Min</th>
+                                    <th className={`py-3 pl-3 rounded-tl-xl ${m.gameMode === 'CHERRY' ? 'w-7/12' : 'w-5/12'}`}>Jugador</th>
+                                    <th className={`py-3 text-center ${m.gameMode === 'CHERRY' ? 'w-5/12 rounded-tr-xl pr-3' : 'w-3/12'}`}>KDA</th>
+                                    {m.gameMode !== 'CHERRY' && (
+                                      <>
+                                        <th className="py-3 text-center w-2/12">Daño</th>
+                                        <th className="py-3 text-right pr-3 rounded-tr-xl w-2/12">Oro/Min</th>
+                                      </>
+                                    )}
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {team.players.map((p, pIdx) => (
                                     <tr key={pIdx} className="border-b border-white/5 last:border-0 hover:bg-white/10 transition-colors">
-                                      <td className="py-3 pl-3 flex items-center gap-2 sm:gap-4">
+                                      <td 
+                                        className="py-3 pl-3 flex items-center gap-2 sm:gap-4 cursor-pointer group/player hover:bg-white/5 transition-colors rounded-l-xl"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (p.name) performSearch(p.name, p.tag || 'EUW');
+                                        }}
+                                        title={`Ver historial de ${p.name}`}
+                                      >
                                         <div className="relative group shrink-0">
                                           <img 
-                                            src={`https://ddragon.leagueoflegends.com/cdn/14.5.1/img/champion/${p.champion}.png`} 
+                                            src={getChampionImage(p.champion)} 
                                             alt={p.champion}
-                                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border-2 border-black/80 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border-2 border-black/80 shadow-lg group-hover/player:scale-105 transition-transform duration-300"
                                             onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/48?text=?' }}
                                           />
                                         </div>
                                         <div className="flex flex-col overflow-hidden">
-                                          <span className="text-white font-bold text-sm sm:text-base truncate drop-shadow-md" title={p.name}>{p.name || 'Desconocido'}</span>
+                                          <span className="text-white font-bold text-sm sm:text-base truncate drop-shadow-md group-hover/player:text-gold transition-colors">{p.name || 'Desconocido'}</span>
                                           <span className="text-gray-400 text-xs font-medium">#{p.tag || '???'}</span>
                                         </div>
                                       </td>
-                                      <td className="py-3 text-center">
+                                      <td className={`py-3 text-center ${m.gameMode === 'CHERRY' ? 'pr-3' : ''}`}>
                                         <div className="font-mono text-xs sm:text-sm font-black tracking-tight text-white whitespace-nowrap">{p.kills}<span className="text-gray-500 font-bold mx-0.5">/</span>{p.deaths}<span className="text-gray-500 font-bold mx-0.5">/</span>{p.assists}</div>
                                         <div className="text-gray-400 text-[10px] sm:text-xs mt-0.5 font-bold">{p.kda} <span className="font-normal text-gray-500">KDA</span></div>
                                       </td>
-                                      <td className="py-3 text-center">
-                                        <span className="font-mono text-xs sm:text-sm text-gray-200 font-bold drop-shadow-md">{(p.damage || 0).toLocaleString()}</span>
-                                      </td>
-                                      <td className="py-3 pr-3 text-right flex flex-col items-end justify-center h-full">
-                                        <div className="text-gold font-black bg-yellow-900/50 border border-yellow-500/30 inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-sm mt-1 whitespace-nowrap text-xs sm:text-sm">
-                                          {p.gpm}
-                                        </div>
-                                      </td>
+                                      {m.gameMode !== 'CHERRY' && (
+                                        <>
+                                          <td className="py-3 text-center">
+                                            <span className="font-mono text-xs sm:text-sm text-gray-200 font-bold drop-shadow-md">{(p.damage || 0).toLocaleString()}</span>
+                                          </td>
+                                          <td className="py-3 pr-3 text-right flex flex-col items-end justify-center h-full">
+                                            <div className="text-gold font-black bg-yellow-900/50 border border-yellow-500/30 inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-sm mt-1 whitespace-nowrap text-xs sm:text-sm">
+                                              {p.gpm}
+                                            </div>
+                                          </td>
+                                        </>
+                                      )}
                                     </tr>
                                   ))}
                                 </tbody>

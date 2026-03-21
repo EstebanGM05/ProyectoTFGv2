@@ -137,7 +137,7 @@ def get_participant_data(match_data, puuid):
                 
                 # Get name & tag
                 t_name = teammate.get("riotIdGameName", "")
-                t_tag = teammate.get("riotIdTagLine", "")
+                t_tag = teammate.get("riotIdTagline", "")
                 t_champ = teammate.get("championName", "Unknown")
 
                 if not t_name:
