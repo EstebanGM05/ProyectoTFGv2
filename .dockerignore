@@ -1,0 +1,14 @@
+# Python
+backend/venv/
+backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+frontend/node_modules/
+npm-debug.log
+
+# Bases de datos y Entornos (Opcional, pero recomendado no copiar la bd de dev)
+backend/league_of_legends.db
+backend/.env
