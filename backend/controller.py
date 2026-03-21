@@ -136,10 +136,19 @@ def fetch_match_history():
         
     match_ids = get_matches(puuid, count=30)
     matches_data = []
-    for mid in match_ids:
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def process_match(mid):
         details = get_match_details(mid)
         if details:
-            p_data = get_participant_data(details, puuid)
+            return get_participant_data(details, puuid)
+        return None
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        future_to_mid = {executor.submit(process_match, mid): mid for mid in match_ids}
+        for future in as_completed(future_to_mid):
+            p_data = future.result()
             if p_data:
                 matches_data.append(p_data)
                 
@@ -273,6 +282,35 @@ def handle_profile():
         db.session.commit()
         session.clear()
         return jsonify({"message": "Cuenta eliminada permanentemente"})
+
+@app.route('/api/profile/upload', methods=['POST'])
+def upload_avatar():
+    if 'user_id' not in session:
+        return jsonify({"error": "No autenticado"}), 401
+    
+    if 'image' not in request.files:
+        return jsonify({"error": "No se envió ninguna imagen"}), 400
+        
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "Archivo vacío"}), 400
+        
+    from werkzeug.utils import secure_filename
+    import os
+    from model import base_dir
+    
+    filename = secure_filename(f"user_{session['user_id']}_{file.filename}")
+    upload_folder = os.path.join(base_dir, '../frontend/public/uploads')
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+        
+    file.save(os.path.join(upload_folder, filename))
+    
+    user = User.query.get(session['user_id'])
+    user.profile_picture = filename
+    db.session.commit()
+    
+    return jsonify({"message": "Foto de perfil actualizada", "image": filename})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -75,13 +75,11 @@ def get_participant_data(match_data, puuid):
             win = p.get("win", False)
             champion_name = p.get("championName", "Unknown")
             
-            # Calculate KDA manually or use the one provided if available, but usually calculated
             if deaths == 0:
                 kda_value = kills + assists
             else:
                 kda_value = (kills + assists) / deaths
             
-            # Extra stats
             cs = p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0)
             gold = p.get("goldEarned", 0)
             damage_turrets = p.get("damageDealtToTurrets", 0)
@@ -114,23 +112,12 @@ def get_participant_data(match_data, puuid):
             is_arena = game_mode == "CHERRY"
 
             for teammate in participants:
-                # For Arena, group by placement (1-8). For others, group by teamId (100/200)
                 if is_arena:
-                    # placement is 1-8 for Arena teams
                     group_id = teammate.get("placement", 99)
                 else:
                     group_id = teammate.get("teamId", 0)
 
-                    if is_arena:
-                        # Arena logic (omitted for brevity, assume similar object structure if needed, or stick to simple name for now if not critical, 
-                        # but user asked for "details of match", so likely standard 5v5.
-                        # For now, let's keep simple string for Arena or update it to object if requested.
-                        # The user request implies seeing player details.
-                        # Let's make it an object for consistency.
-                        
-                        # Note: Arena participants might not have riotIdTagLine populated reliably in all contexts in older API versions, 
-                        # but typically they do.
-                        pass # logic below handles both
+
 
                 if group_id not in teams_map:
                     teams_map[group_id] = []
@@ -269,31 +256,31 @@ def get_most_played_role(game_name, tag_line):
     if not match_ids:
         return {"role": "UNKNOWN", "last_champion": "Unknown"}
         
-    roles = []
+    from concurrent.futures import ThreadPoolExecutor
     
-    for mid in match_ids:
+    def process_role(mid):
         details = get_match_details(mid)
-        if details:
-            info = details.get("info", {})
-            participants = info.get("participants", [])
-            for p in participants:
-                if p.get("puuid") == puuid:
-                    # teamPosition can be empty in some modes (ARAM/Arena)
-                    # We can use "individualPosition" or fallback to "UNKNOWN"
-                    pos = p.get("teamPosition") or p.get("individualPosition") or "UNKNOWN"
-                    if pos == "": pos = "UNKNOWN"
-                    roles.append(pos)
-                    break
-    
-    # Get last played champion (from the first match, which is the most recent)
+        if not details: return None, None
+        
+        info = details.get("info", {})
+        for p in info.get("participants", []):
+            if p.get("puuid") == puuid:
+                pos = p.get("teamPosition") or p.get("individualPosition") or "UNKNOWN"
+                if pos == "": pos = "UNKNOWN"
+                
+                champ = p.get("championName", "Unknown")
+                return pos, champ if mid == match_ids[0] else None
+        return None, None
+
+    roles = []
     last_champion = "Unknown"
-    first_match_details = get_match_details(match_ids[0])
-    if first_match_details:
-         info = first_match_details.get("info", {})
-         for p in info.get("participants", []):
-             if p.get("puuid") == puuid:
-                 last_champion = p.get("championName", "Unknown")
-                 break
+    
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        for pos, champ in executor.map(process_role, match_ids):
+            if pos:
+                roles.append(pos)
+            if champ:
+                last_champion = champ
 
     if not roles:
         return {"role": "UNKNOWN", "last_champion": last_champion}

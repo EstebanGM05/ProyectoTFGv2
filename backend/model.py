@@ -7,7 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 pymysql.install_as_MySQLdb()
 
 import os
-import os
 from flask_cors import CORS
 base_dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)

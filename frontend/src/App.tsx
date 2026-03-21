@@ -28,9 +28,17 @@ function NavLinks() {
           
           {user ? (
             <>
-              <Link to="/profile" className="text-gold hover:text-white flex items-center gap-2">
-                 <div className="w-8 h-8 bg-dark-blue rounded-full overflow-hidden border border-gold flex items-center justify-center text-xs">
-                    {user.username.charAt(0).toUpperCase()}
+              <Link to="/profile" className="text-gold hover:text-white flex items-center gap-2 group">
+                 <div className="w-8 h-8 bg-dark-blue rounded-full overflow-hidden border border-gold flex items-center justify-center text-xs group-hover:scale-110 transition-transform shadow-md">
+                    {user.profile_picture && user.profile_picture !== 'default.png' ? (
+                      <img 
+                        src={user.profile_picture.startsWith('user_') ? `/uploads/${user.profile_picture}` : `/img/champions/${user.profile_picture}`} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      user.username.charAt(0).toUpperCase()
+                    )}
                  </div>
                  {user.username}
               </Link>
