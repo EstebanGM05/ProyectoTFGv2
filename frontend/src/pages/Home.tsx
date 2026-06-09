@@ -338,21 +338,21 @@ export default function Home() {
             
             {/* TABS HEADER */}
             <div className="absolute top-0 w-full z-30 flex justify-between items-start pt-6 px-6 pointer-events-none">
-              <div className="flex gap-4 bg-black/60 backdrop-blur-xl p-2 rounded-2xl border border-white/10 pointer-events-auto shadow-2xl">
+              <div className="flex gap-2 sm:gap-4 bg-black/60 backdrop-blur-xl p-1 sm:p-2 rounded-2xl border border-white/10 pointer-events-auto shadow-2xl">
                 <button 
-                  className={`px-6 py-2 rounded-xl font-black uppercase tracking-wider text-sm transition-colors ${modalMode === 'habilidades' ? 'bg-gold text-dark-blue' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                  className={`px-3 sm:px-6 py-2 rounded-xl font-black uppercase tracking-wider text-xs sm:text-sm transition-colors ${modalMode === 'habilidades' ? 'bg-gold text-dark-blue' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
                   onClick={() => setModalMode('habilidades')}
                 >
                   Habilidades
                 </button>
                 <button 
-                  className={`px-6 py-2 rounded-xl font-black uppercase tracking-wider text-sm transition-colors ${modalMode === 'skins' ? 'bg-gold text-dark-blue' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                  className={`px-3 sm:px-6 py-2 rounded-xl font-black uppercase tracking-wider text-xs sm:text-sm transition-colors ${modalMode === 'skins' ? 'bg-gold text-dark-blue' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
                   onClick={() => setModalMode('skins')}
                 >
                   Skins
                 </button>
               </div>
-              <button onClick={closeModal} className="bg-black/60 backdrop-blur-xl border border-white/10 text-white w-12 h-12 rounded-full flex items-center justify-center font-black text-xl hover:bg-red-500 hover:text-white transition-colors pointer-events-auto">X</button>
+              <button onClick={closeModal} className="bg-black/60 backdrop-blur-xl border border-white/10 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-lg sm:text-xl hover:bg-red-500 hover:text-white transition-colors pointer-events-auto shrink-0">X</button>
             </div>
 
             {/* ERROR O CARGA (solo importante para las requests) */}
@@ -382,26 +382,26 @@ export default function Home() {
                      />
                      <div className="absolute inset-0 bg-gradient-to-t from-dark-blue via-dark-blue/80 to-transparent"></div>
                      <div className="absolute inset-0 bg-black/20"></div>
-                     <div className="absolute bottom-0 left-0 p-8 w-full z-10 flex items-end">
+                     <div className="absolute bottom-0 left-0 p-4 sm:p-8 w-full z-10 flex items-end">
                        <div>
-                          <h2 className="text-5xl font-black text-white drop-shadow-xl tracking-tight leading-none">{selectedChamp.name}</h2>
-                          <p className="text-xl text-gold italic font-bold tracking-wide mt-2 drop-shadow-md">{selectedChamp.title}</p>
+                          <h2 className="text-4xl sm:text-5xl font-black text-white drop-shadow-xl tracking-tight leading-none">{selectedChamp.name}</h2>
+                          <p className="text-lg sm:text-xl text-gold italic font-bold tracking-wide mt-1 sm:mt-2 drop-shadow-md">{selectedChamp.title}</p>
                        </div>
                      </div>
                   </div>
 
                   {/* Contenido Habilidades */}
                   <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 pb-10">
-                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 xl:gap-12">
+                    <div className="flex flex-col xl:grid xl:grid-cols-5 gap-6 xl:gap-12">
                       {/* Menu */}
-                      <div className="xl:col-span-2 flex flex-col gap-3">
+                      <div className="xl:col-span-2 flex flex-row xl:flex-col gap-3 overflow-x-auto pb-4 xl:pb-0 custom-scrollbar snap-x">
                         {/* Pasiva */}
                         <button 
                           onClick={() => setActiveSpellIdx(4)}
-                          className={`flex items-center gap-5 p-4 rounded-2xl transition-all border-2 text-left ${activeSpellIdx === 4 ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
+                          className={`shrink-0 snap-center flex items-center gap-3 xl:gap-5 p-3 xl:p-4 rounded-2xl transition-all border-2 text-left ${activeSpellIdx === 4 ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
                         >
-                           <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/passive/${champDetails.passive.image.full}`} alt="Pasiva" className="w-14 h-14 rounded-xl shadow-md border border-black" />
-                           <div>
+                           <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/passive/${champDetails.passive.image.full}`} alt="Pasiva" className="w-12 h-12 xl:w-14 xl:h-14 rounded-xl shadow-md border border-black" />
+                           <div className="hidden sm:block">
                              <span className={`text-[11px] font-black uppercase tracking-widest ${activeSpellIdx === 4 ? 'text-gold' : 'text-gray-500'}`}>Pasiva</span>
                              <h4 className={`font-bold text-lg leading-tight truncate ${activeSpellIdx === 4 ? 'text-white' : 'text-gray-300'}`}>{champDetails.passive.name}</h4>
                            </div>
@@ -415,13 +415,13 @@ export default function Home() {
                             <button 
                               key={key}
                               onClick={() => setActiveSpellIdx(idx)}
-                              className={`flex items-center gap-5 p-4 rounded-2xl transition-all border-2 text-left ${isActive ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
+                              className={`shrink-0 snap-center flex items-center gap-3 xl:gap-5 p-3 xl:p-4 rounded-2xl transition-all border-2 text-left ${isActive ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
                             >
                               <div className="relative shrink-0">
-                                <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/spell/${spell.image.full}`} alt={key} className="w-14 h-14 rounded-xl shadow-md border border-black" />
-                                <div className={`absolute -bottom-2 -right-2 border-2 ${isActive ? 'bg-gold border-dark-blue text-dark-blue' : 'bg-dark-blue border-bright-blue text-bright-blue'} w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shadow-lg transition-colors`}>{key}</div>
+                                <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/spell/${spell.image.full}`} alt={key} className="w-12 h-12 xl:w-14 xl:h-14 rounded-xl shadow-md border border-black" />
+                                <div className={`absolute -bottom-2 -right-2 border-2 ${isActive ? 'bg-gold border-dark-blue text-dark-blue' : 'bg-dark-blue border-bright-blue text-bright-blue'} w-6 h-6 xl:w-7 xl:h-7 rounded-lg flex items-center justify-center text-[10px] xl:text-xs font-black shadow-lg transition-colors`}>{key}</div>
                               </div>
-                              <div className="flex-1 overflow-hidden">
+                              <div className="hidden sm:block flex-1 overflow-hidden">
                                 <h4 className={`font-bold text-lg leading-tight truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>{spell.name}</h4>
                               </div>
                             </button>
@@ -501,8 +501,8 @@ export default function Home() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-dark-blue via-dark-blue/40 to-transparent z-20 pointer-events-none"></div>
                       
-                      <div className="absolute bottom-10 left-10 z-30">
-                         <h2 className="text-4xl md:text-6xl font-black text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] tracking-tight">
+                      <div className="absolute bottom-4 left-4 sm:bottom-10 sm:left-10 z-30">
+                         <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] tracking-tight">
                             {activeSkin.name === 'default' ? selectedChamp.name : activeSkin.name}
                          </h2>
                       </div>

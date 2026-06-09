@@ -141,7 +141,7 @@ export default function AdminDashboard() {
               placeholder="Buscar usuario..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-black/40 border border-white/10 text-white pl-10 pr-4 py-2 rounded-xl focus:border-gold outline-none transition-colors w-64 text-sm"
+              className="bg-black/40 border border-white/10 text-white pl-10 pr-4 py-2 rounded-xl focus:border-gold outline-none transition-colors w-full md:w-64 text-sm"
             />
           </div>
         </div>

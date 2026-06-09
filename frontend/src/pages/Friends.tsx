@@ -98,46 +98,46 @@ export default function Friends() {
             <span className="text-3xl">🏆</span> TOP ALIADOS (SEMANA)
           </h2>
           
-          <div className="flex flex-col sm:flex-row justify-center items-end gap-4 sm:gap-8 min-h-[220px]">
+          <div className="flex flex-row justify-center items-end gap-2 sm:gap-8 min-h-[160px] sm:min-h-[220px]">
             {/* Rank 2 */}
             {leaderboard[1] && (
-              <div onClick={() => goToHistory(leaderboard[1].name, leaderboard[1].tag)} className="flex flex-col items-center group cursor-pointer order-2 sm:order-1 transition-transform hover:-translate-y-4">
+              <div onClick={() => goToHistory(leaderboard[1].name, leaderboard[1].tag)} className="flex flex-col items-center group cursor-pointer order-1 transition-transform hover:-translate-y-2 sm:hover:-translate-y-4">
                 <div className="relative">
-                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[1].profile_icon_id || 1}.png`} className="w-20 h-20 rounded-full border-4 border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.5)] z-10 relative" alt="Icon" />
-                  <div className="absolute -bottom-3 -right-2 bg-gray-400 text-black font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-black z-20">2</div>
+                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[1].profile_icon_id || 1}.png`} className="w-12 h-12 sm:w-20 sm:h-20 rounded-full border-2 sm:border-4 border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.5)] z-10 relative" alt="Icon" />
+                  <div className="absolute -bottom-2 -right-1 sm:-bottom-3 sm:-right-2 bg-gray-400 text-black font-black w-5 h-5 sm:w-8 sm:h-8 text-[10px] sm:text-base rounded-full flex items-center justify-center border-2 border-black z-20">2</div>
                 </div>
-                <div className="bg-gray-800/80 mt-4 px-4 py-3 rounded-t-xl border-t-2 border-l-2 border-r-2 border-gray-400/50 flex flex-col items-center w-32 h-24 justify-end">
-                  <span className="text-white font-bold text-sm truncate w-full text-center">{leaderboard[1].name}</span>
-                  <span className="text-gold font-black text-lg">{leaderboard[1].winrate}%</span>
+                <div className="bg-gray-800/80 mt-2 sm:mt-4 px-1 sm:px-4 py-2 sm:py-3 rounded-t-lg sm:rounded-t-xl border-t-2 border-l-2 border-r-2 border-gray-400/50 flex flex-col items-center w-20 h-20 sm:w-32 sm:h-24 justify-end">
+                  <span className="text-white font-bold text-[10px] sm:text-sm truncate w-full text-center">{leaderboard[1].name}</span>
+                  <span className="text-gold font-black text-xs sm:text-lg">{leaderboard[1].winrate}%</span>
                 </div>
               </div>
             )}
             
             {/* Rank 1 */}
             {leaderboard[0] && (
-              <div onClick={() => goToHistory(leaderboard[0].name, leaderboard[0].tag)} className="flex flex-col items-center group cursor-pointer order-1 sm:order-2 transition-transform hover:-translate-y-4">
+              <div onClick={() => goToHistory(leaderboard[0].name, leaderboard[0].tag)} className="flex flex-col items-center group cursor-pointer order-2 transition-transform hover:-translate-y-2 sm:hover:-translate-y-4">
                 <div className="relative">
-                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[0].profile_icon_id || 1}.png`} className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] z-10 relative" alt="Icon" />
-                  <div className="absolute -bottom-4 -right-1 bg-yellow-400 text-black font-black w-10 h-10 rounded-full flex items-center justify-center border-2 border-black z-20 text-xl shadow-lg">1</div>
+                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[0].profile_icon_id || 1}.png`} className="w-16 h-16 sm:w-28 sm:h-28 rounded-full border-2 sm:border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] z-10 relative" alt="Icon" />
+                  <div className="absolute -bottom-2 -right-1 sm:-bottom-4 sm:-right-1 bg-yellow-400 text-black font-black w-6 h-6 sm:w-10 sm:h-10 text-[10px] sm:text-xl rounded-full flex items-center justify-center border-2 border-black z-20 shadow-lg">1</div>
                 </div>
-                <div className="bg-gradient-to-t from-yellow-900/40 to-transparent mt-4 px-4 py-3 rounded-t-xl border-t-2 border-l-2 border-r-2 border-yellow-400/50 flex flex-col items-center w-36 h-32 justify-end">
-                  <span className="text-white font-black text-md truncate w-full text-center">{leaderboard[0].name}</span>
-                  <span className="text-yellow-400 font-black text-2xl drop-shadow-md">{leaderboard[0].winrate}%</span>
-                  <span className="text-xs text-yellow-200 mt-1 uppercase font-bold tracking-wider">KDA: {leaderboard[0].kda}</span>
+                <div className="bg-gradient-to-t from-yellow-900/40 to-transparent mt-2 sm:mt-4 px-1 sm:px-4 py-2 sm:py-3 rounded-t-lg sm:rounded-t-xl border-t-2 border-l-2 border-r-2 border-yellow-400/50 flex flex-col items-center w-24 h-24 sm:w-36 sm:h-32 justify-end">
+                  <span className="text-white font-black text-[11px] sm:text-md truncate w-full text-center">{leaderboard[0].name}</span>
+                  <span className="text-yellow-400 font-black text-sm sm:text-2xl drop-shadow-md">{leaderboard[0].winrate}%</span>
+                  <span className="text-[8px] sm:text-xs text-yellow-200 mt-0 sm:mt-1 uppercase font-bold tracking-wider">KDA: {leaderboard[0].kda}</span>
                 </div>
               </div>
             )}
             
             {/* Rank 3 */}
             {leaderboard[2] && (
-              <div onClick={() => goToHistory(leaderboard[2].name, leaderboard[2].tag)} className="flex flex-col items-center group cursor-pointer order-3 sm:order-3 transition-transform hover:-translate-y-4">
+              <div onClick={() => goToHistory(leaderboard[2].name, leaderboard[2].tag)} className="flex flex-col items-center group cursor-pointer order-3 transition-transform hover:-translate-y-2 sm:hover:-translate-y-4">
                 <div className="relative">
-                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[2].profile_icon_id || 1}.png`} className="w-16 h-16 rounded-full border-4 border-orange-700 shadow-[0_0_15px_rgba(194,65,12,0.5)] z-10 relative" alt="Icon" />
-                  <div className="absolute -bottom-2 -right-2 bg-orange-700 text-white font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-black z-20 text-xs">3</div>
+                  <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${leaderboard[2].profile_icon_id || 1}.png`} className="w-10 h-10 sm:w-16 sm:h-16 rounded-full border-2 sm:border-4 border-orange-700 shadow-[0_0_15px_rgba(194,65,12,0.5)] z-10 relative" alt="Icon" />
+                  <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-orange-700 text-white font-black w-4 h-4 sm:w-7 sm:h-7 text-[8px] sm:text-xs rounded-full flex items-center justify-center border-2 border-black z-20">3</div>
                 </div>
-                <div className="bg-gray-800/60 mt-4 px-4 py-3 rounded-t-xl border-t-2 border-l-2 border-r-2 border-orange-700/50 flex flex-col items-center w-28 h-20 justify-end">
-                  <span className="text-gray-300 font-bold text-xs truncate w-full text-center">{leaderboard[2].name}</span>
-                  <span className="text-orange-400 font-black text-md">{leaderboard[2].winrate}%</span>
+                <div className="bg-gray-800/60 mt-2 sm:mt-4 px-1 sm:px-4 py-1 sm:py-3 rounded-t-lg sm:rounded-t-xl border-t-2 border-l-2 border-r-2 border-orange-700/50 flex flex-col items-center w-16 h-16 sm:w-28 sm:h-20 justify-end">
+                  <span className="text-gray-300 font-bold text-[9px] sm:text-xs truncate w-full text-center">{leaderboard[2].name}</span>
+                  <span className="text-orange-400 font-black text-xs sm:text-md">{leaderboard[2].winrate}%</span>
                 </div>
               </div>
             )}

@@ -212,7 +212,7 @@ export default function Profile() {
                   />
                 </div>
               </div>
-              <button type="submit" className="bg-sky-500/20 text-sky-400 font-black px-6 py-2.5 rounded-xl border-2 border-sky-500/50 hover:bg-sky-500/40 transition-colors">
+              <button type="submit" className="w-full sm:w-auto bg-sky-500/20 text-sky-400 font-black px-6 py-2.5 rounded-xl border-2 border-sky-500/50 hover:bg-sky-500/40 transition-colors mt-2">
                 Guardar Cambios
               </button>
             </form>
@@ -254,7 +254,7 @@ export default function Profile() {
                   />
                 </div>
               </div>
-              <button type="submit" className="bg-green-500/20 text-green-400 font-black px-6 py-2.5 rounded-xl border-2 border-green-500/50 hover:bg-green-500/40 transition-colors mt-2">
+              <button type="submit" className="w-full sm:w-auto bg-green-500/20 text-green-400 font-black px-6 py-2.5 rounded-xl border-2 border-green-500/50 hover:bg-green-500/40 transition-colors mt-2">
                 Actualizar Contraseña
               </button>
             </form>
@@ -295,7 +295,7 @@ export default function Profile() {
 
               <div>
                 <h4 className="text-sm text-gold font-black uppercase tracking-wider mb-4 flex items-center gap-2"><span>⚔️</span> O elige un Campeón</h4>
-                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3 sm:gap-4">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3 sm:gap-4">
                   {champions.map(c => (
                     <div 
                       key={c.id} 
