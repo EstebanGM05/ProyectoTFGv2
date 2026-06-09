@@ -1,10 +1,7 @@
 import os
 import requests
-import pymysql
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-
-pymysql.install_as_MySQLdb()
 
 import os
 from flask_cors import CORS
