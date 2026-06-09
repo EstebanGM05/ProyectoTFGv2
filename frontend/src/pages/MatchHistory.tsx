@@ -259,7 +259,7 @@ export default function MatchHistory() {
         <div className="flex flex-wrap justify-center gap-3 mb-10 max-w-4xl mx-auto">
           {user.riot_name && user.riot_tag && (
             <button 
-              onClick={() => performSearch(user.riot_name, user.riot_tag)}
+              onClick={() => performSearch(user.riot_name as string, user.riot_tag as string)}
               className="bg-medium-blue border border-gold/50 text-gold px-4 py-2 rounded-lg text-sm font-bold hover:bg-gold hover:text-dark-blue transition-colors flex items-center gap-2 shadow-md"
             >
               <span>👤</span> Mi Perfil ({user.riot_name})
