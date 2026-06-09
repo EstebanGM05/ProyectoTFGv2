@@ -109,4 +109,7 @@ def sync_api_to_db(lang="es_ES"):
     db.session.commit()
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception:
+        pass
