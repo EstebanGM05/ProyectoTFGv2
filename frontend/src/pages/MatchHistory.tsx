@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface Match {
   gameMode: string;
@@ -12,7 +14,10 @@ interface Match {
   deaths: number;
   assists: number;
   kda: string;
+  cs?: number;
+  gold?: number;
   teams?: TeamData[];
+  items?: number[];
 }
 
 interface TeamData {
@@ -40,7 +45,23 @@ interface PlayerData {
   gold: number;
   gpm: string;
   damage: number;
+  items?: number[];
 }
+
+const getDisplayMode = (mode: string) => {
+  if (!mode) return 'Desconocido';
+  const m = mode.toUpperCase();
+  if (m === 'CHERRY') return 'Arena';
+  if (m === 'ARAM_MAYHEM') return 'ARAM Caos';
+  if (m === 'CLASSIC') return 'Grieta del Invocador';
+  return m;
+};
+
+const hasObjectives = (mode: string) => {
+  if (!mode) return false;
+  const m = mode.toUpperCase();
+  return m !== 'CHERRY' && m !== 'ARAM' && m !== 'ARAM_MAYHEM';
+};
 
 const getTeamStyle = (colorClass: string) => {
   switch (colorClass) {
@@ -76,8 +97,45 @@ const getTeamHeaderColor = (colorClass: string) => {
 
 const getChampionImage = (champName: string) => {
   const name = champName === 'FiddleSticks' ? 'Fiddlesticks' : champName;
-  return `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${name}.png`;
+  return `https://ddragon.leagueoflegends.com/cdn/16.11.1/img/champion/${name}.png`;
 };
+
+const ItemIcon = ({ itemId }: { itemId: number }) => {
+  if (!itemId || itemId === 0) {
+    return <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black/50 border border-white/10 rounded-md"></div>;
+  }
+  return (
+    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black/50 border border-white/10 rounded-md overflow-hidden flex items-center justify-center shadow-md relative group/item">
+      <img 
+        src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/item/${itemId}.png`} 
+        alt={`Item ${itemId}`}
+        className="w-full h-full object-cover"
+        onError={(e) => { 
+          if (!e.currentTarget.src.includes('communitydragon')) {
+            e.currentTarget.src = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/item-icons/${itemId}.png`;
+          } else {
+            e.currentTarget.style.display = 'none'; 
+          }
+        }}
+      />
+      <div className="absolute inset-0 hidden group-hover/item:flex items-center justify-center bg-black/80 text-[8px] font-bold text-white text-center break-words opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5">
+        {itemId}
+      </div>
+    </div>
+  );
+};
+
+const RANK_AVERAGES: Record<string, { kda: number; csPerMin: number; goldPerMin: number }> = {
+  'Hierro': { kda: 1.8, csPerMin: 4.5, goldPerMin: 350 },
+  'Bronce': { kda: 2.0, csPerMin: 5.0, goldPerMin: 370 },
+  'Plata': { kda: 2.2, csPerMin: 5.5, goldPerMin: 390 },
+  'Oro': { kda: 2.4, csPerMin: 6.0, goldPerMin: 410 },
+  'Platino': { kda: 2.6, csPerMin: 6.5, goldPerMin: 430 },
+  'Esmeralda': { kda: 2.8, csPerMin: 7.0, goldPerMin: 440 },
+  'Diamante': { kda: 3.0, csPerMin: 7.5, goldPerMin: 450 },
+  'Maestro+': { kda: 3.3, csPerMin: 8.2, goldPerMin: 480 },
+};
+const RANKS = Object.keys(RANK_AVERAGES);
 
 export default function MatchHistory() {
   const [gameName, setGameName] = useState('');
@@ -85,6 +143,27 @@ export default function MatchHistory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [data, setData] = useState<any>(null);
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const [friends, setFriends] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (user) {
+      axios.get('/api/friends', { withCredentials: true })
+        .then(res => setFriends(res.data))
+        .catch(err => console.error("Error fetching friends:", err));
+    }
+  }, [user]);
+  
+  React.useEffect(() => {
+    const pName = searchParams.get('name');
+    const pTag = searchParams.get('tag');
+    if (pName && pTag && !data && !loading && gameName === '') {
+      setGameName(pName);
+      setTagLine(pTag);
+      performSearch(pName, pTag);
+    }
+  }, [searchParams]);
   
   // Expanded & Filters State
   const [expandedMatchIndex, setExpandedMatchIndex] = useState<number | null>(null);
@@ -92,6 +171,7 @@ export default function MatchHistory() {
   const [filterChampion, setFilterChampion] = useState('');
   const [filterResult, setFilterResult] = useState('Todos');
   const [filterMode, setFilterMode] = useState('Todos');
+  const [selectedRank, setSelectedRank] = useState('Oro');
 
   const toggleMatch = (idx: number) => {
     setExpandedMatchIndex(expandedMatchIndex === idx ? null : idx);
@@ -174,6 +254,34 @@ export default function MatchHistory() {
         </button>
       </form>
 
+      {/* QUICK SEARCH */}
+      {user && (
+        <div className="flex flex-wrap justify-center gap-3 mb-10 max-w-4xl mx-auto">
+          {user.riot_name && user.riot_tag && (
+            <button 
+              onClick={() => performSearch(user.riot_name, user.riot_tag)}
+              className="bg-medium-blue border border-gold/50 text-gold px-4 py-2 rounded-lg text-sm font-bold hover:bg-gold hover:text-dark-blue transition-colors flex items-center gap-2 shadow-md"
+            >
+              <span>👤</span> Mi Perfil ({user.riot_name})
+            </button>
+          )}
+          {friends.map(f => (
+            <button 
+              key={f.id}
+              onClick={() => performSearch(f.name, f.tag)}
+              className="bg-dark-blue/80 border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold hover:border-gold hover:text-gold transition-colors flex items-center gap-2 shadow-md"
+            >
+              <img 
+                src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/profileicon/${f.profile_icon_id || 1}.png`} 
+                className="w-5 h-5 rounded-full border border-gray-500"
+                alt=""
+              />
+              {f.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && <div className="bg-loss/80 border-2 border-loss-border text-white font-bold p-4 rounded-xl mb-8 text-center">{error}</div>}
 
       {data && (
@@ -220,6 +328,37 @@ export default function MatchHistory() {
               )}
             </div>
 
+            {/* KDA Trend Graph */}
+            {data.matches && data.matches.length > 0 && (
+              <div className="bg-gradient-to-br from-dark-blue/80 to-medium-blue/80 border border-gold/30 p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                <h3 className="text-xl font-bold text-gold mb-4 flex items-center gap-2">
+                  <span className="text-2xl">📈</span> Tendencia de KDA (Últimas 10 partidas)
+                </h3>
+                <div className="flex items-end h-40 gap-2 overflow-x-auto pb-2">
+                  {data.matches.slice(0, 10).reverse().map((m: Match, idx: number) => {
+                    const kda = parseFloat(m.kda) || 0;
+                    const heightPct = Math.min((kda / 15) * 100, 100);
+                    const isWin = m.win;
+                    
+                    return (
+                      <div key={idx} className="flex flex-col items-center justify-end h-full flex-1 min-w-[40px] group">
+                        <span className="text-xs text-white mb-1 opacity-0 group-hover:opacity-100 transition-opacity font-bold">{kda.toFixed(1)}</span>
+                        <div 
+                          className={`w-full rounded-t-md transition-all duration-500 hover:opacity-80 ${isWin ? 'bg-blue-500/80 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-red-500/80 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`}
+                          style={{ height: `${Math.max(5, heightPct)}%` }}
+                        ></div>
+                        <img 
+                          src={getChampionImage(m.championName)} 
+                          className="w-6 h-6 mt-2 rounded-full border border-white/20"
+                          alt="champ"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Filters */}
             <div className="bg-gradient-to-br from-dark-blue/80 to-medium-blue/80 border-2 border-gold/30 rounded-2xl p-5 shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] flex flex-wrap gap-4 items-end relative overflow-hidden">
                <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold/5 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
@@ -257,7 +396,7 @@ export default function MatchHistory() {
                 >
                   <option value="Todos">Todos</option>
                   {uniqueModes.map((m) => (
-                    <option key={m} value={m}>{m === 'CHERRY' ? 'Arena' : m}</option>
+                    <option key={m} value={m}>{getDisplayMode(m)}</option>
                   ))}
                 </select>
               </div>
@@ -294,7 +433,7 @@ export default function MatchHistory() {
                       <div>
                         <h4 className="font-black text-lg text-gold tracking-wide drop-shadow-sm">{m.championName}</h4>
                         <p className={`font-black tracking-wider text-sm ${m.win ? 'text-win-border' : 'text-loss-border'}`}>
-                          {m.win ? 'VICTORIA' : 'DERROTA'} <span className="text-gray-400 font-medium text-xs ml-2 py-0.5 px-2 bg-black/30 rounded-full">({m.gameMode === 'CHERRY' ? 'Arena' : m.gameMode})</span>
+                          {m.win ? 'VICTORIA' : 'DERROTA'} <span className="text-gray-400 font-medium text-xs ml-2 py-0.5 px-2 bg-black/30 rounded-full">({getDisplayMode(m.gameMode)})</span>
                         </p>
                       </div>
                     </div>
@@ -308,10 +447,112 @@ export default function MatchHistory() {
                     </div>
                   </div>
 
+                  {/* Main Player Items Block */}
+                  <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+                    <div className="flex gap-1 sm:gap-1.5 flex-wrap">
+                      {m.items?.slice(0,6).map((itemId: number, i: number) => (
+                        <ItemIcon key={i} itemId={itemId} />
+                      ))}
+                      {/* Trinket */}
+                      <div className="ml-1 sm:ml-2">
+                        <ItemIcon itemId={m.items?.[6] || 0} />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Expanded Section */}
                   {expandedMatchIndex === idx && m.teams && (
                     <div className="bg-black/60 p-4 sm:p-6 border-t font-sans border-white/5 text-sm rounded-b-xl shadow-[inset_0_10px_30px_rgba(0,0,0,0.5)]">
-                      <div className={`grid gap-4 sm:gap-6 ${m.gameMode === 'CHERRY' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4' : 'grid-cols-1 xl:grid-cols-2'}`}>
+                      
+                      {/* Comparativa Panel */}
+                      {(() => {
+                         const matchMinutes = m.gameDuration / 60;
+                         const playerCsPerMin = matchMinutes > 0 ? (m.cs || 0) / matchMinutes : 0;
+                         const playerGoldPerMin = matchMinutes > 0 ? (m.gold || 0) / matchMinutes : 0;
+                         const playerKda = parseFloat(m.kda) || 0;
+                         const avg = RANK_AVERAGES[selectedRank] || RANK_AVERAGES['Oro'];
+                         
+                         const getBarColor = (val: number, avgVal: number) => {
+                            if (val >= avgVal * 1.1) return 'bg-emerald-500';
+                            if (val >= avgVal) return 'bg-green-400';
+                            if (val >= avgVal * 0.9) return 'bg-yellow-500';
+                            return 'bg-red-500/80';
+                         };
+                         const getTextColor = (val: number, avgVal: number) => {
+                            if (val >= avgVal * 1.1) return 'text-emerald-400';
+                            if (val >= avgVal) return 'text-green-400';
+                            if (val >= avgVal * 0.9) return 'text-yellow-400';
+                            return 'text-red-400/90';
+                         };
+
+                         return (
+                           <div className="bg-gradient-to-br from-black/80 to-black/40 border border-white/10 rounded-xl p-4 mb-6 relative overflow-hidden">
+                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 relative z-10">
+                               <h5 className="text-gold font-bold flex items-center gap-2">
+                                 <span className="text-xl">📊</span> Comparativa de Rendimiento
+                               </h5>
+                               <div className="flex items-center gap-2 bg-black/40 rounded-lg px-2 border border-white/5 hover:border-gold/30 transition-colors">
+                                 <span className="text-xs text-gray-400 font-medium">vs</span>
+                                 <select 
+                                   className="bg-transparent text-sm text-gray-200 focus:outline-none py-1.5 cursor-pointer font-bold appearance-none pl-1 pr-6"
+                                   style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23A0AEC0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.2rem top 50%', backgroundSize: '0.65rem auto' }}
+                                   value={selectedRank}
+                                   onChange={(e) => setSelectedRank(e.target.value)}
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
+                                   {RANKS.map(r => <option key={r} value={r} className="bg-black">{r}</option>)}
+                                 </select>
+                               </div>
+                             </div>
+
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+                               {/* KDA */}
+                               <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                 <div className="flex justify-between text-xs mb-1">
+                                   <span className="text-gray-400 font-medium">KDA</span>
+                                   <span className="text-gray-500">Media: {avg.kda.toFixed(1)}</span>
+                                 </div>
+                                 <div className="flex items-end gap-2 mb-2">
+                                   <span className={`text-xl font-bold ${getTextColor(playerKda, avg.kda)}`}>{playerKda.toFixed(2)}</span>
+                                 </div>
+                                 <div className="w-full bg-black/60 rounded-full h-1.5 overflow-hidden">
+                                   <div className={`h-full ${getBarColor(playerKda, avg.kda)}`} style={{ width: `${Math.min(100, (playerKda / avg.kda) * 50)}%` }}></div>
+                                 </div>
+                               </div>
+
+                               {/* CS/Min */}
+                               <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                 <div className="flex justify-between text-xs mb-1">
+                                   <span className="text-gray-400 font-medium">CS/Min</span>
+                                   <span className="text-gray-500">Media: {avg.csPerMin.toFixed(1)}</span>
+                                 </div>
+                                 <div className="flex items-end gap-2 mb-2">
+                                   <span className={`text-xl font-bold ${getTextColor(playerCsPerMin, avg.csPerMin)}`}>{playerCsPerMin.toFixed(1)}</span>
+                                 </div>
+                                 <div className="w-full bg-black/60 rounded-full h-1.5 overflow-hidden">
+                                   <div className={`h-full ${getBarColor(playerCsPerMin, avg.csPerMin)}`} style={{ width: `${Math.min(100, (playerCsPerMin / avg.csPerMin) * 50)}%` }}></div>
+                                 </div>
+                               </div>
+
+                               {/* Gold/Min */}
+                               <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                 <div className="flex justify-between text-xs mb-1">
+                                   <span className="text-gray-400 font-medium">Oro/Min</span>
+                                   <span className="text-gray-500">Media: {avg.goldPerMin}</span>
+                                 </div>
+                                 <div className="flex items-end gap-2 mb-2">
+                                   <span className={`text-xl font-bold ${getTextColor(playerGoldPerMin, avg.goldPerMin)}`}>{Math.round(playerGoldPerMin)}</span>
+                                 </div>
+                                 <div className="w-full bg-black/60 rounded-full h-1.5 overflow-hidden">
+                                   <div className={`h-full ${getBarColor(playerGoldPerMin, avg.goldPerMin)}`} style={{ width: `${Math.min(100, (playerGoldPerMin / avg.goldPerMin) * 50)}%` }}></div>
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                         );
+                      })()}
+
+                      <div className={`grid gap-4 sm:gap-6 ${m.gameMode === 'CHERRY' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 xl:grid-cols-2'}`}>
                         {m.teams.map((team, tIdx) => (
                           <div key={tIdx} className={`flex-1 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all relative overflow-hidden ${getTeamStyle(team.color_class)}`}>
                             
@@ -320,7 +561,7 @@ export default function MatchHistory() {
                               <h5 className={`text-xl font-black tracking-wider drop-shadow-md ${getTeamHeaderColor(team.color_class)}`}>
                                 {team.id} <span className="text-white ml-3 py-1 px-4 bg-black/60 rounded-full text-sm font-bold shadow-sm">{team.total_kills} Kills</span>
                               </h5>
-                              {m.gameMode !== 'CHERRY' && (
+                              {hasObjectives(m.gameMode) && (
                                 <div className="text-xs sm:text-sm font-bold bg-black/60 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-gray-200 flex flex-wrap gap-2 sm:gap-4 shadow-sm border border-white/10 backdrop-blur-md">
                                   <span title="Torretas" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🗼</span> <span className="text-white">{team.objectives.tower || 0}</span></span>
                                   <span title="Dragones" className="flex items-center gap-1.5"><span className="text-base sm:text-lg">🐉</span> <span className="text-white">{team.objectives.dragon || 0}</span></span>
@@ -347,7 +588,8 @@ export default function MatchHistory() {
                                 </thead>
                                 <tbody>
                                   {team.players.map((p, pIdx) => (
-                                    <tr key={pIdx} className="border-b border-white/5 last:border-0 hover:bg-white/10 transition-colors">
+                                    <React.Fragment key={pIdx}>
+                                      <tr className="border-b border-white/5 hover:bg-white/10 transition-colors">
                                       <td 
                                         className="py-3 pl-3 flex items-center gap-2 sm:gap-4 cursor-pointer group/player hover:bg-white/5 transition-colors rounded-l-xl"
                                         onClick={(e) => {
@@ -386,6 +628,20 @@ export default function MatchHistory() {
                                         </>
                                       )}
                                     </tr>
+                                    {/* Sub-row for items */}
+                                    <tr className="border-b border-white/5 last:border-0 bg-black/20">
+                                      <td colSpan={m.gameMode === 'CHERRY' ? 2 : 4} className="py-2 pl-3 sm:pl-16">
+                                        <div className="flex gap-1">
+                                          {p.items?.slice(0,6).map((itemId: number, i: number) => (
+                                            <ItemIcon key={i} itemId={itemId} />
+                                          ))}
+                                          <div className="ml-2">
+                                            <ItemIcon itemId={p.items?.[6] || 0} />
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                    </React.Fragment>
                                   ))}
                                 </tbody>
                               </table>

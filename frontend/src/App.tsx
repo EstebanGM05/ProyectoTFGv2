@@ -8,6 +8,7 @@ import Favorites from './pages/Favorites';
 import MatchHistory from './pages/MatchHistory';
 import Friends from './pages/Friends';
 import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
 
 function NavLinks() {
   const { user, logout } = useAuth();
@@ -24,6 +25,12 @@ function NavLinks() {
           <Link to="/friends" className="text-text-color hover:text-gold transition">Amigos</Link>
           <Link to="/favorites" className="text-text-color hover:text-gold transition">Favoritos</Link>
           
+          {user && user.is_admin && (
+            <Link to="/admin" className="text-red-400 font-bold hover:text-red-300 transition flex items-center gap-1">
+              <span className="text-xs">🛡️</span> Admin
+            </Link>
+          )}
+
           <div className="h-6 w-px bg-border-color mx-2"></div>
           
           {user ? (
@@ -70,6 +77,7 @@ function App() {
               <Route path="/match-history" element={<MatchHistory />} />
               <Route path="/friends" element={<Friends />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
           </main>
           <footer className="bg-medium-blue p-6 text-center text-sm text-gray-500 border-t border-border-color">

@@ -9,7 +9,7 @@ pymysql.install_as_MySQLdb()
 import os
 from flask_cors import CORS
 base_dir = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/')
 CORS(app, supports_credentials=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///league_of_legends.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -21,10 +21,11 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
-    riot_name = db.Column(db.String(50), nullable=True)
+    riot_name = db.Column(db.String(100), nullable=True)
     riot_tag = db.Column(db.String(10), nullable=True)
     email = db.Column(db.String(120), nullable=True)
-    profile_picture = db.Column(db.String(200), nullable=True, default='default.png')
+    profile_picture = db.Column(db.String(255), nullable=True, default='default.png')
+    is_admin = db.Column(db.Boolean, default=False)
     favorites = db.relationship('Favorite', backref='user', lazy=True)
 
 class Character(db.Model):
@@ -40,6 +41,7 @@ class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     champ_id = db.Column(db.String(50), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    skin_num = db.Column(db.Integer, nullable=True, default=0)
 
 class Friend(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,6 +50,9 @@ class Friend(db.Model):
     tag = db.Column(db.String(10), nullable=False)
     role = db.Column(db.String(50), nullable=False) # TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY
     last_champion = db.Column(db.String(50), nullable=True) # Last champion played
+    profile_icon_id = db.Column(db.Integer, nullable=True, default=1)
+    winrate = db.Column(db.Float, nullable=True, default=0.0)
+    kda = db.Column(db.Float, nullable=True, default=0.0)
 
 
 def sync_api_to_db(lang="es_ES"):

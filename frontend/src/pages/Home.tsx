@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import CustomSelect from '../components/CustomSelect';
 
 interface Champion {
   id: number;
@@ -111,7 +112,7 @@ export default function Home() {
     
     try {
        // Use fetch to avoid axios globally appending withCredentials=true, which breaks CORS on Ddragon
-       const res = await fetch(`https://ddragon.leagueoflegends.com/cdn/16.6.1/data/es_ES/champion/${ddragonId}.json`);
+       const res = await fetch(`https://ddragon.leagueoflegends.com/cdn/16.11.1/data/es_ES/champion/${ddragonId}.json`);
        if (!res.ok) throw new Error('Network response was not ok');
        const data = await res.json();
        setChampDetails(data.data[ddragonId]);
@@ -174,12 +175,14 @@ export default function Home() {
       </div>
 
       {/* Filters Section */}
-      <div className="bg-gradient-to-br from-dark-blue to-medium-blue border-2 border-gold/40 rounded-3xl p-6 md:p-8 mb-10 shadow-[0_15px_35px_-5px_rgba(201,170,113,0.15)] flex flex-wrap gap-5 items-end relative overflow-hidden transition-all duration-300 hover:border-gold/60">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full blur-[40px] -mr-10 -mt-20 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-10 w-32 h-32 bg-bright-blue/10 rounded-full blur-2xl -mb-10 pointer-events-none"></div>
-        <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mt-20 pointer-events-none"></div>
+      <div className="relative z-50 bg-gradient-to-br from-dark-blue to-medium-blue border-2 border-gold/40 rounded-3xl p-6 md:p-8 mb-10 shadow-[0_15px_35px_-5px_rgba(201,170,113,0.15)] flex flex-wrap gap-5 items-end transition-all duration-300 hover:border-gold/60">
+        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full blur-[40px] -mr-10 -mt-20"></div>
+          <div className="absolute bottom-0 left-10 w-32 h-32 bg-bright-blue/10 rounded-full blur-2xl -mb-10"></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mt-20"></div>
+        </div>
 
-        <div className="flex-1 w-full min-w-[200px] z-10 transition-transform hover:-translate-y-1 duration-300">
+        <div className="flex-1 w-full min-w-[200px] relative z-50 transition-transform hover:-translate-y-1 duration-300">
           <label className="block text-xs text-gold mb-2 uppercase font-black tracking-wider drop-shadow-md">🔍 Buscar Invocador o Campeón</label>
           <input 
             type="text" 
@@ -190,74 +193,74 @@ export default function Home() {
           />
         </div>
         
-        <div className="w-full sm:w-[130px] z-10 transition-transform hover:-translate-y-1 duration-300">
+        <div className="w-full sm:w-[130px] relative z-40 transition-transform hover:-translate-y-1 duration-300">
           <label className="block text-xs text-gold mb-2 uppercase font-black tracking-wider drop-shadow-md">✨ Orden</label>
-          <select 
-            className="w-full bg-black/50 border-2 border-white/10 rounded-xl p-3 text-white focus:border-gold focus:ring-4 focus:ring-gold/20 outline-none transition-all font-bold appearance-none cursor-pointer backdrop-blur-sm"
+          <CustomSelect 
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-          >
-            <option value="asc">A - Z</option>
-            <option value="desc">Z - A</option>
-          </select>
+            onChange={(val) => setSortOrder(val as 'asc' | 'desc')}
+            options={[
+              { value: 'asc', label: 'A - Z' },
+              { value: 'desc', label: 'Z - A' }
+            ]}
+          />
         </div>
 
-        <div className="w-full sm:w-[150px] z-10 transition-transform hover:-translate-y-1 duration-300">
+        <div className="w-full sm:w-[150px] relative z-30 transition-transform hover:-translate-y-1 duration-300">
           <label className="block text-xs text-gold mb-2 uppercase font-black tracking-wider drop-shadow-md">⚔️ Clase</label>
-          <select 
-            className="w-full bg-black/50 border-2 border-white/10 rounded-xl p-3 text-white focus:border-gold focus:ring-4 focus:ring-gold/20 outline-none transition-all font-bold appearance-none cursor-pointer backdrop-blur-sm"
+          <CustomSelect 
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <option value="Todos">Todas</option>
-            <option value="Tank">🛡️ Tanque</option>
-            <option value="Fighter">💪 Bruiser</option>
-            <option value="Marksman">🏹 Tirador</option>
-            <option value="Mage">🔮 Mago</option>
-            <option value="Assassin">🗡️ Asesino</option>
-            <option value="Support">💖 Apoyo</option>
-          </select>
+            onChange={(val) => setRoleFilter(val)}
+            options={[
+              { value: 'Todos', label: 'Todas' },
+              { value: 'Tank', label: '🛡️ Tanque' },
+              { value: 'Fighter', label: '💪 Bruiser' },
+              { value: 'Marksman', label: '🏹 Tirador' },
+              { value: 'Mage', label: '🔮 Mago' },
+              { value: 'Assassin', label: '🗡️ Asesino' },
+              { value: 'Support', label: '💖 Apoyo' }
+            ]}
+          />
         </div>
 
-        <div className="w-full sm:w-[140px] z-10 transition-transform hover:-translate-y-1 duration-300">
+        <div className="w-full sm:w-[140px] relative z-20 transition-transform hover:-translate-y-1 duration-300">
           <label className="block text-xs text-gold mb-2 uppercase font-black tracking-wider drop-shadow-md">🗺️ Línea</label>
-          <select 
-            className="w-full bg-black/50 border-2 border-white/10 rounded-xl p-3 text-white focus:border-gold focus:ring-4 focus:ring-gold/20 outline-none transition-all font-bold appearance-none cursor-pointer backdrop-blur-sm"
+          <CustomSelect 
             value={laneFilter}
-            onChange={(e) => setLaneFilter(e.target.value)}
-          >
-            <option value="Todos">Cualquiera</option>
-            <option value="Top">Top</option>
-            <option value="Jungle">Jungla</option>
-            <option value="Mid">Mid</option>
-            <option value="ADC">ADC</option>
-            <option value="Support">Supp</option>
-          </select>
+            onChange={(val) => setLaneFilter(val)}
+            options={[
+              { value: 'Todos', label: 'Cualquiera' },
+              { value: 'Top', label: 'Top' },
+              { value: 'Jungle', label: 'Jungla' },
+              { value: 'Mid', label: 'Mid' },
+              { value: 'ADC', label: 'ADC' },
+              { value: 'Support', label: 'Supp' }
+            ]}
+          />
         </div>
 
-        <div className="w-full sm:w-[180px] z-10 transition-transform hover:-translate-y-1 duration-300">
+        <div className="w-full sm:w-[180px] relative z-10 transition-transform hover:-translate-y-1 duration-300">
           <label className="block text-xs text-gold mb-2 uppercase font-black tracking-wider drop-shadow-md">🌍 Región</label>
-          <select 
-            className="w-full bg-black/50 border-2 border-white/10 rounded-xl p-3 text-white focus:border-gold focus:ring-4 focus:ring-gold/20 outline-none transition-all font-bold appearance-none cursor-pointer backdrop-blur-sm"
+          <CustomSelect 
             value={regionFilter}
-            onChange={(e) => setRegionFilter(e.target.value)}
-          >
-            <option value="Todos">Cualquiera</option>
-            <option value="Demacia">Demacia</option>
-            <option value="Noxus">Noxus</option>
-            <option value="Ionia">Ionia</option>
-            <option value="Piltover">Piltover</option>
-            <option value="Zaun">Zaun</option>
-            <option value="Freljord">Freljord</option>
-            <option value="Shadow Isles">Islas de la Sombra</option>
-            <option value="Shurima">Shurima</option>
-            <option value="Targon">Targon</option>
-            <option value="Bilgewater">Aguas Estancadas</option>
-            <option value="Ixtal">Ixtal</option>
-            <option value="Void">El Vacío</option>
-            <option value="Bandle City">C. de Bandle</option>
-            <option value="Runaterra / Otros">Otras</option>
-          </select>
+            onChange={(val) => setRegionFilter(val)}
+            options={[
+              { value: 'Todos', label: 'Cualquiera' },
+              { value: 'Demacia', label: 'Demacia' },
+              { value: 'Noxus', label: 'Noxus' },
+              { value: 'Ionia', label: 'Ionia' },
+              { value: 'Piltover', label: 'Piltover' },
+              { value: 'Zaun', label: 'Zaun' },
+              { value: 'Freljord', label: 'Freljord' },
+              { value: 'Shadow Isles', label: 'Islas de la Sombra' },
+              { value: 'Shurima', label: 'Shurima' },
+              { value: 'Targon', label: 'Targon' },
+              { value: 'Bilgewater', label: 'Aguas Estancadas' },
+              { value: 'Ixtal', label: 'Ixtal' },
+              { value: 'Void', label: 'El Vacío' },
+              { value: 'Bandle City', label: 'C. de Bandle' },
+              { value: 'Runaterra / Otros', label: 'Otras' }
+            ]}
+          />
         </div>
       </div>
 
@@ -397,7 +400,7 @@ export default function Home() {
                           onClick={() => setActiveSpellIdx(4)}
                           className={`flex items-center gap-5 p-4 rounded-2xl transition-all border-2 text-left ${activeSpellIdx === 4 ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
                         >
-                           <img src={`https://ddragon.leagueoflegends.com/cdn/16.6.1/img/passive/${champDetails.passive.image.full}`} alt="Pasiva" className="w-14 h-14 rounded-xl shadow-md border border-black" />
+                           <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/passive/${champDetails.passive.image.full}`} alt="Pasiva" className="w-14 h-14 rounded-xl shadow-md border border-black" />
                            <div>
                              <span className={`text-[11px] font-black uppercase tracking-widest ${activeSpellIdx === 4 ? 'text-gold' : 'text-gray-500'}`}>Pasiva</span>
                              <h4 className={`font-bold text-lg leading-tight truncate ${activeSpellIdx === 4 ? 'text-white' : 'text-gray-300'}`}>{champDetails.passive.name}</h4>
@@ -415,7 +418,7 @@ export default function Home() {
                               className={`flex items-center gap-5 p-4 rounded-2xl transition-all border-2 text-left ${isActive ? 'bg-gradient-to-r from-gold/20 to-transparent border-gold/50 shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 'bg-black/40 border-transparent hover:bg-black/60'}`}
                             >
                               <div className="relative shrink-0">
-                                <img src={`https://ddragon.leagueoflegends.com/cdn/16.6.1/img/spell/${spell.image.full}`} alt={key} className="w-14 h-14 rounded-xl shadow-md border border-black" />
+                                <img src={`https://ddragon.leagueoflegends.com/cdn/16.11.1/img/spell/${spell.image.full}`} alt={key} className="w-14 h-14 rounded-xl shadow-md border border-black" />
                                 <div className={`absolute -bottom-2 -right-2 border-2 ${isActive ? 'bg-gold border-dark-blue text-dark-blue' : 'bg-dark-blue border-bright-blue text-bright-blue'} w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shadow-lg transition-colors`}>{key}</div>
                               </div>
                               <div className="flex-1 overflow-hidden">

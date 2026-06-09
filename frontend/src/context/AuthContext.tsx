@@ -11,6 +11,7 @@ interface User {
   riot_name?: string;
   riot_tag?: string;
   profile_picture?: string;
+  is_admin?: boolean;
 }
 
 interface AuthContextType {

@@ -15,9 +15,10 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  // Riot ID State
+  // Info State
   const [riotName, setRiotName] = useState(user?.riot_name || '');
   const [riotTag, setRiotTag] = useState(user?.riot_tag || '');
+  const [email, setEmail] = useState(user?.email || '');
   
   // Photo Modal State
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -30,6 +31,7 @@ export default function Profile() {
     } else {
       setRiotName(user.riot_name || '');
       setRiotTag(user.riot_tag || '');
+      setEmail(user.email || '');
     }
   }, [user, navigate]);
 
@@ -68,16 +70,17 @@ export default function Profile() {
     }
   };
 
-  const handleUpdateRiotId = async (e: React.FormEvent) => {
+  const handleUpdateInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await axios.put('/api/profile', {
         action: 'update_info',
         riot_name: riotName,
-        riot_tag: riotTag
+        riot_tag: riotTag,
+        email: email
       });
-      updateUser({ riot_name: riotName, riot_tag: riotTag });
-      showMessage('Riot ID actualizado correctamente');
+      updateUser({ riot_name: riotName, riot_tag: riotTag, email: email });
+      showMessage('Información actualizada correctamente');
     } catch (err: any) {
       showMessage(err.response?.data?.error || 'Error al actualizar', true);
     }
@@ -173,10 +176,20 @@ export default function Profile() {
         {/* Right Column: Forms */}
         <div className="md:col-span-2 flex flex-col gap-6">
           
-          {/* Riot ID Section */}
+          {/* Info Section */}
           <div className="bg-medium-blue/80 p-6 sm:p-8 rounded-2xl shadow-xl border-2 border-border-color">
-            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2"><span className="text-sky-400">🎮</span> Cuenta de Riot</h3>
-            <form onSubmit={handleUpdateRiotId}>
+            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2"><span className="text-sky-400">🎮</span> Información y Cuenta de Riot</h3>
+            <form onSubmit={handleUpdateInfo}>
+              <div className="mb-4">
+                <label className="block text-xs text-gray-400 mb-2 uppercase font-black tracking-wider">Correo Electrónico</label>
+                <input 
+                  type="email" 
+                  placeholder="ejemplo@correo.com"
+                  className="w-full bg-black/40 border-2 border-white/10 rounded-xl p-3 text-white focus:border-sky-400 outline-none transition-all font-bold"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-2 uppercase font-black tracking-wider">Nombre en el juego</label>
@@ -200,7 +213,7 @@ export default function Profile() {
                 </div>
               </div>
               <button type="submit" className="bg-sky-500/20 text-sky-400 font-black px-6 py-2.5 rounded-xl border-2 border-sky-500/50 hover:bg-sky-500/40 transition-colors">
-                Vincular Cuenta
+                Guardar Cambios
               </button>
             </form>
           </div>

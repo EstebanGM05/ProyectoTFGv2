@@ -1,5 +1,6 @@
 import os
 import requests
+from functools import lru_cache
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +21,7 @@ def get_routing_region(match_id_or_platform):
     if prefix in ['OC1', 'PH2', 'SG2', 'TH2', 'TW2', 'VN2']: return 'sea'
     return 'europe'
 
+@lru_cache(maxsize=128)
 def get_puuid(game_name, tag_line):
     """
     Get the PUUID for a given Riot ID (GameName#TagLine).
@@ -31,6 +33,43 @@ def get_puuid(game_name, tag_line):
     if response.status_code == 200:
         return response.json().get("puuid")
     return None
+
+def get_platform_routing(tag_line):
+    t = tag_line.upper()
+    if t in ['EUW', 'EUW1']: return 'euw1'
+    if t in ['NA', 'NA1']: return 'na1'
+    if t in ['EUNE', 'EUN1']: return 'eun1'
+    if t in ['KR', 'KR1']: return 'kr'
+    if t in ['BR', 'BR1']: return 'br1'
+    if t in ['LAN', 'LA1']: return 'la1'
+    if t in ['LAS', 'LA2']: return 'la2'
+    if t in ['OCE', 'OC1']: return 'oc1'
+    if t in ['TR', 'TR1']: return 'tr1'
+    if t in ['RU']: return 'ru'
+    if t in ['JP', 'JP1']: return 'jp1'
+    return 'euw1' # Fallback
+
+@lru_cache(maxsize=1024)
+def get_champion_mastery(puuid, champion_id, tag_line="EUW"):
+    """
+    Get mastery for a specific champion.
+    """
+    platform = get_platform_routing(tag_line)
+    url = f"https://{platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/by-champion/{champion_id}"
+    response = requests.get(url, headers=HEADERS)
+    
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+@lru_cache(maxsize=128)
+def get_all_champion_masteries(puuid, tag_line="EUW"):
+    platform = get_platform_routing(tag_line)
+    url = f"https://{platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json()
+    return []
 
 def get_matches(puuid, count=10):
     """
@@ -47,6 +86,7 @@ def get_matches(puuid, count=10):
     # If all regions fail or return 0, fallback empty
     return []
 
+@lru_cache(maxsize=1024)
 def get_match_details(match_id):
     """
     Get details for a specific match ID tracking its proper routing region.
@@ -89,6 +129,7 @@ def get_participant_data(match_data, puuid):
             penta_kills = p.get("pentaKills", 0)
             first_blood = p.get("firstBloodKill", False)
             player_party_id = p.get("partyId")
+            items = [p.get(f"item{i}", 0) for i in range(7)]
             
             # Medals Logic
             medals = []
@@ -135,6 +176,7 @@ def get_participant_data(match_data, puuid):
                 t_assists = teammate.get("assists", 0)
                 t_gold = teammate.get("goldEarned", 0)
                 t_damage = teammate.get("totalDamageDealtToChampions", 0)
+                t_items = [teammate.get(f"item{i}", 0) for i in range(7)]
                 
                 # Calculate KDA
                 if t_deaths == 0:
@@ -159,7 +201,8 @@ def get_participant_data(match_data, puuid):
                     "kda": f"{t_kda:.2f}",
                     "gold": t_gold,
                     "gpm": f"{t_gpm:.1f}",
-                    "damage": t_damage
+                    "damage": t_damage,
+                    "items": t_items
                 })
 
             # Assign colors
@@ -240,13 +283,15 @@ def get_participant_data(match_data, puuid):
                 "gold": gold,
                 "turrets": turret_kills,
                 "medals": medals,
+                "items": items,
                 "teams": teams_data
             }
     return None
 
 def get_most_played_role(game_name, tag_line):
     """
-    Determines the most played role for a user based on their last 20 matches.
+    Determines the most played role for a user based on their last 20 matches,
+    and also calculates winrate, KDA and extracts their profile icon.
     """
     puuid = get_puuid(game_name, tag_line)
     if not puuid:
@@ -254,13 +299,13 @@ def get_most_played_role(game_name, tag_line):
     
     match_ids = get_matches(puuid, count=20)
     if not match_ids:
-        return {"role": "UNKNOWN", "last_champion": "Unknown"}
+        return {"role": "UNKNOWN", "last_champion": "Unknown", "profile_icon_id": 1, "winrate": 0.0, "kda": 0.0}
         
     from concurrent.futures import ThreadPoolExecutor
     
     def process_role(mid):
         details = get_match_details(mid)
-        if not details: return None, None
+        if not details: return None
         
         info = details.get("info", {})
         for p in info.get("participants", []):
@@ -269,21 +314,51 @@ def get_most_played_role(game_name, tag_line):
                 if pos == "": pos = "UNKNOWN"
                 
                 champ = p.get("championName", "Unknown")
-                return pos, champ if mid == match_ids[0] else None
-        return None, None
+                win = p.get("win", False)
+                kills = p.get("kills", 0)
+                deaths = p.get("deaths", 0)
+                assists = p.get("assists", 0)
+                icon = p.get("profileIcon", 1)
+                
+                return {
+                    "mid": mid,
+                    "pos": pos,
+                    "champ": champ,
+                    "win": win,
+                    "kills": kills,
+                    "deaths": deaths,
+                    "assists": assists,
+                    "icon": icon
+                }
+        return None
 
     roles = []
     last_champion = "Unknown"
+    profile_icon_id = 1
+    total_wins = 0
+    total_kills = 0
+    total_deaths = 0
+    total_assists = 0
+    valid_matches = 0
     
     with ThreadPoolExecutor(max_workers=6) as executor:
-        for pos, champ in executor.map(process_role, match_ids):
-            if pos:
-                roles.append(pos)
-            if champ:
-                last_champion = champ
+        results = list(executor.map(process_role, match_ids))
+        
+    for r in results:
+        if r:
+            roles.append(r["pos"])
+            if r["mid"] == match_ids[0]:
+                last_champion = r["champ"]
+                profile_icon_id = r["icon"]
+            
+            if r["win"]: total_wins += 1
+            total_kills += r["kills"]
+            total_deaths += r["deaths"]
+            total_assists += r["assists"]
+            valid_matches += 1
 
     if not roles:
-        return {"role": "UNKNOWN", "last_champion": last_champion}
+        return {"role": "UNKNOWN", "last_champion": last_champion, "profile_icon_id": profile_icon_id, "winrate": 0.0, "kda": 0.0}
         
     # Count most frequent role
     from collections import Counter
@@ -293,4 +368,13 @@ def get_most_played_role(game_name, tag_line):
     if role == "UNKNOWN" and last_champion != "Unknown":
         role = "Cualquiera"
         
-    return {"role": role, "last_champion": last_champion}
+    winrate = (total_wins / valid_matches * 100) if valid_matches > 0 else 0.0
+    kda = (total_kills + total_assists) / total_deaths if total_deaths > 0 else float(total_kills + total_assists)
+        
+    return {
+        "role": role, 
+        "last_champion": last_champion,
+        "profile_icon_id": profile_icon_id,
+        "winrate": round(winrate, 1),
+        "kda": round(kda, 2)
+    }
