@@ -2,6 +2,7 @@ import os
 import requests
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 import os
 from flask_cors import CORS
@@ -24,6 +25,10 @@ class User(db.Model):
     profile_picture = db.Column(db.String(255), nullable=True, default='default.png')
     is_admin = db.Column(db.Boolean, default=False)
     favorites = db.relationship('Favorite', backref='user', lazy=True)
+    lfg_posts = db.relationship('LFGPost', backref='user', lazy=True, cascade="all, delete-orphan")
+    comments_received = db.relationship('UserComment', foreign_keys='UserComment.target_user_id', backref='target_user', lazy=True, cascade="all, delete-orphan")
+    comments_authored = db.relationship('UserComment', foreign_keys='UserComment.author_id', backref='author', lazy=True, cascade="all, delete-orphan")
+    owned_teams = db.relationship('Team', backref='captain', lazy=True)
 
 class Character(db.Model):
     id = db.Column(db.Integer, primary_key=True) # Riot Key
@@ -50,6 +55,57 @@ class Friend(db.Model):
     profile_icon_id = db.Column(db.Integer, nullable=True, default=1)
     winrate = db.Column(db.Float, nullable=True, default=0.0)
     kda = db.Column(db.Float, nullable=True, default=0.0)
+
+class LFGPost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
+    rank = db.Column(db.String(50), nullable=True) # E.g., IRON, BRONZE, GOLD
+    message = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    is_positive = db.Column(db.Boolean, default=True) # True = +1, False = -1
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Team(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    tag = db.Column(db.String(10), nullable=False)
+    captain_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    members = db.relationship('TeamMember', backref='team', lazy=True, cascade="all, delete-orphan")
+    vacancies = db.relationship('TeamVacancy', backref='team', lazy=True, cascade="all, delete-orphan")
+
+class TeamMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False) # TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='team_memberships', lazy=True)
+
+class TeamVacancy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
+    min_rank = db.Column(db.String(50), nullable=True)
+    message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    applications = db.relationship('TeamApplication', backref='vacancy', lazy=True, cascade="all, delete-orphan")
+
+class TeamApplication(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vacancy_id = db.Column(db.Integer, db.ForeignKey('team_vacancy.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='PENDING') # PENDING, ACCEPTED, REJECTED
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='team_applications', lazy=True)
 
 
 def sync_api_to_db(lang="es_ES"):

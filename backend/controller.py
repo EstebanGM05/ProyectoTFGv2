@@ -1,7 +1,8 @@
 from flask import request, session, jsonify
-from model import app, db, User, Character, Favorite, Friend, sync_api_to_db
+from model import app, db, User, Character, Favorite, Friend, LFGPost, UserComment, sync_api_to_db
 
 # Configuración crucial para CORS y Cookies en desarrollo SPA
+# Force reload
 app.config['ENV'] = 'development'
 # app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -184,6 +185,13 @@ def fetch_match_history():
     game_name = data.get('game_name')
     tag_line = data.get('tag_line')
     
+    try:
+        count = int(data.get('count', 20))
+        if count < 1: count = 20
+        if count > 100: count = 100
+    except:
+        count = 20
+        
     if not game_name or not tag_line:
         return jsonify({"error": "Faltan datos de Riot ID"}), 400
         
@@ -194,7 +202,7 @@ def fetch_match_history():
     if not puuid:
         return jsonify({"error": "No se encontró el usuario. Verifica el Riot ID y el Tag."}), 404
         
-    match_ids = get_matches(puuid, count=70)
+    match_ids = get_matches(puuid, count=count)
     matches_data = []
     
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -381,6 +389,130 @@ def upload_avatar():
     
     return jsonify({"message": "Foto de perfil actualizada", "image": filename})
 
+@app.route('/api/lfg', methods=['GET', 'POST'])
+def handle_lfg():
+    if request.method == 'GET':
+        posts = LFGPost.query.order_by(LFGPost.timestamp.desc()).all()
+        data = []
+        for p in posts:
+            user = p.user
+            data.append({
+                "id": p.id,
+                "user_id": user.id,
+                "username": user.username,
+                "riot_name": user.riot_name,
+                "riot_tag": user.riot_tag,
+                "profile_picture": user.profile_picture,
+                "role": p.role,
+                "rank": p.rank,
+                "message": p.message,
+                "timestamp": p.timestamp.isoformat() if p.timestamp else None
+            })
+        return jsonify(data)
+        
+    elif request.method == 'POST':
+        if 'user_id' not in session:
+            return jsonify({"error": "No autenticado"}), 401
+            
+        data = request.get_json()
+        role = data.get('role')
+        message = data.get('message')
+        
+        user = User.query.get(session['user_id'])
+        
+        # Get rank from Riot API if linked
+        rank = "UNRANKED"
+        if user.riot_name and user.riot_tag:
+            from riot_api import get_puuid, get_summoner_rank
+            puuid = get_puuid(user.riot_name, user.riot_tag)
+            if puuid:
+                rank = get_summoner_rank(puuid, user.riot_tag)
+                
+        new_post = LFGPost(
+            user_id=session['user_id'],
+            role=role,
+            rank=rank,
+            message=message
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        return jsonify({"message": "Publicación creada", "rank": rank})
+
+@app.route('/api/lfg/<int:post_id>', methods=['DELETE'])
+def delete_lfg(post_id):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    post = LFGPost.query.get(post_id)
+    if post and (post.user_id == session['user_id'] or User.query.get(session['user_id']).is_admin):
+        db.session.delete(post)
+        db.session.commit()
+        return jsonify({"message": "Publicación eliminada"})
+    return jsonify({"error": "No encontrado o sin permisos"}), 404
+
+@app.route('/api/users/<int:target_id>', methods=['GET'])
+def get_public_profile(target_id):
+    user = User.query.get(target_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+        
+    favorites = []
+    for fav in user.favorites:
+        champ = Character.query.get(int(fav.champ_id))
+        if champ:
+            favorites.append({
+                "id": champ.id,
+                "name": champ.name,
+                "image_url": champ.image_url,
+                "role": champ.role
+            })
+            
+    comments = []
+    for c in sorted(user.comments_received, key=lambda x: x.timestamp, reverse=True):
+        comments.append({
+            "id": c.id,
+            "author_username": c.author.username,
+            "author_id": c.author.id,
+            "author_picture": c.author.profile_picture,
+            "comment": c.comment,
+            "is_positive": c.is_positive,
+            "timestamp": c.timestamp.isoformat() if c.timestamp else None
+        })
+        
+    positives = sum(1 for c in user.comments_received if c.is_positive)
+    negatives = len(user.comments_received) - positives
+        
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "riot_name": user.riot_name,
+        "riot_tag": user.riot_tag,
+        "profile_picture": user.profile_picture,
+        "favorites": favorites,
+        "comments": comments,
+        "reputation": positives - negatives
+    })
+
+@app.route('/api/users/<int:target_id>/comments', methods=['POST'])
+def add_user_comment(target_id):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    if session['user_id'] == target_id: return jsonify({"error": "No puedes comentarte a ti mismo"}), 400
+    
+    target = User.query.get(target_id)
+    if not target: return jsonify({"error": "Usuario no encontrado"}), 404
+    
+    data = request.get_json()
+    comment_text = data.get('comment')
+    is_positive = data.get('is_positive', True)
+    
+    new_comment = UserComment(
+        author_id=session['user_id'],
+        target_user_id=target_id,
+        comment=comment_text,
+        is_positive=is_positive
+    )
+    db.session.add(new_comment)
+    db.session.commit()
+    return jsonify({"message": "Comentario añadido"})
+
 def admin_required(f):
     from functools import wraps
     @wraps(f)
@@ -475,6 +607,228 @@ def admin_manage_user(user_id):
             
         db.session.commit()
         return jsonify({"message": "Usuario actualizado correctamente"})
+
+# --- TEAMS / CLASH ENDPOINTS ---
+from model import Team, TeamMember, TeamVacancy, TeamApplication
+
+@app.route('/api/teams', methods=['POST'])
+def create_team():
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json()
+    name = data.get('name')
+    tag = data.get('tag')
+    if not name or not tag: return jsonify({"error": "Nombre y Tag obligatorios"}), 400
+    
+    user = User.query.get(session['user_id'])
+    if user.team_memberships:
+        return jsonify({"error": "Ya perteneces a un equipo"}), 400
+        
+    team = Team(name=name, tag=tag, captain_id=user.id)
+    db.session.add(team)
+    db.session.commit() 
+    
+    member = TeamMember(team_id=team.id, user_id=user.id, role="CAPITAN")
+    db.session.add(member)
+    db.session.commit()
+    
+    return jsonify({"message": "Equipo creado", "team_id": team.id})
+
+@app.route('/api/teams/my-team', methods=['GET'])
+def get_my_team():
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    if not user.team_memberships:
+        return jsonify(None) 
+        
+    member = user.team_memberships[0]
+    team = member.team
+    
+    members_data = []
+    for m in team.members:
+        members_data.append({
+            "id": m.id,
+            "user_id": m.user_id,
+            "username": m.user.username,
+            "profile_picture": m.user.profile_picture,
+            "role": m.role,
+            "riot_name": m.user.riot_name,
+            "riot_tag": m.user.riot_tag
+        })
+        
+    vacancies_data = []
+    for v in team.vacancies:
+        apps = []
+        for a in v.applications:
+            apps.append({
+                "id": a.id,
+                "user_id": a.user_id,
+                "username": a.user.username,
+                "profile_picture": a.user.profile_picture,
+                "message": a.message,
+                "status": a.status
+            })
+        vacancies_data.append({
+            "id": v.id,
+            "role": v.role,
+            "min_rank": v.min_rank,
+            "message": v.message,
+            "applications": apps
+        })
+        
+    return jsonify({
+        "id": team.id,
+        "name": team.name,
+        "tag": team.tag,
+        "captain_id": team.captain_id,
+        "members": members_data,
+        "vacancies": vacancies_data
+    })
+
+@app.route('/api/teams/vacancies', methods=['GET', 'POST'])
+def handle_vacancies():
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        if not user.owned_teams:
+            return jsonify({"error": "No eres capitán de ningún equipo"}), 403
+            
+        team = user.owned_teams[0]
+        if len(team.members) >= 5:
+            return jsonify({"error": "El equipo ya está lleno (5/5)"}), 400
+            
+        role = data.get('role')
+        min_rank = data.get('min_rank')
+        message = data.get('message')
+        
+        v = TeamVacancy(team_id=team.id, role=role, min_rank=min_rank, message=message)
+        db.session.add(v)
+        db.session.commit()
+        return jsonify({"message": "Vacante creada"})
+        
+    elif request.method == 'GET':
+        vacancies = TeamVacancy.query.all()
+        data = []
+        for v in vacancies:
+            team = v.team
+            if len(team.members) >= 5:
+                continue 
+                
+            data.append({
+                "id": v.id,
+                "team_id": team.id,
+                "team_name": team.name,
+                "team_tag": team.tag,
+                "captain": team.captain.username,
+                "role": v.role,
+                "min_rank": v.min_rank,
+                "message": v.message,
+                "members_count": len(team.members)
+            })
+        return jsonify(data)
+
+@app.route('/api/teams/vacancies/<int:vid>/apply', methods=['POST'])
+def apply_vacancy(vid):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    if user.team_memberships:
+        return jsonify({"error": "Ya perteneces a un equipo"}), 400
+        
+    v = TeamVacancy.query.get(vid)
+    if not v: return jsonify({"error": "Vacante no encontrada"}), 404
+    
+    if len(v.team.members) >= 5:
+        return jsonify({"error": "El equipo ya está lleno"}), 400
+        
+    existing = TeamApplication.query.filter_by(vacancy_id=vid, user_id=user.id).first()
+    if existing: return jsonify({"error": "Ya has enviado una solicitud"}), 400
+    
+    data = request.get_json()
+    msg = data.get('message', '')
+    
+    app_obj = TeamApplication(vacancy_id=vid, user_id=user.id, message=msg)
+    db.session.add(app_obj)
+    db.session.commit()
+    
+    return jsonify({"message": "Solicitud enviada"})
+
+@app.route('/api/teams/applications/<int:aid>', methods=['PUT'])
+def process_application(aid):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    application = TeamApplication.query.get(aid)
+    if not application: return jsonify({"error": "Solicitud no encontrada"}), 404
+    
+    v = application.vacancy
+    team = v.team
+    
+    if team.captain_id != user.id:
+        return jsonify({"error": "Solo el capitán puede aceptar solicitudes"}), 403
+        
+    data = request.get_json()
+    action = data.get('action') 
+    
+    if action == 'ACCEPT':
+        if len(team.members) >= 5:
+            return jsonify({"error": "El equipo ya está lleno"}), 400
+            
+        member = TeamMember(team_id=team.id, user_id=application.user_id, role=v.role)
+        db.session.add(member)
+        
+        db.session.delete(v)
+        
+        db.session.commit()
+        return jsonify({"message": "Usuario aceptado en el equipo"})
+        
+    elif action == 'REJECT':
+        application.status = 'REJECTED'
+        db.session.commit()
+        return jsonify({"message": "Solicitud rechazada"})
+        
+    return jsonify({"error": "Acción inválida"}), 400
+
+@app.route('/api/teams/members/<int:mid>', methods=['DELETE'])
+def remove_team_member(mid):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    member = TeamMember.query.get(mid)
+    if not member: return jsonify({"error": "Miembro no encontrado"}), 404
+    
+    team = member.team
+    
+    if member.user_id == user.id:
+        if team.captain_id == user.id:
+            return jsonify({"error": "El capitán no puede salir, debe disolver el equipo."}), 400
+        db.session.delete(member)
+        db.session.commit()
+        return jsonify({"message": "Has abandonado el equipo"})
+        
+    elif team.captain_id == user.id:
+        db.session.delete(member)
+        db.session.commit()
+        return jsonify({"message": "Miembro expulsado"})
+        
+    return jsonify({"error": "No tienes permisos"}), 403
+
+@app.route('/api/teams/<int:team_id>', methods=['DELETE'])
+def delete_team(team_id):
+    if 'user_id' not in session: return jsonify({"error": "No autenticado"}), 401
+    user = User.query.get(session['user_id'])
+    
+    team = Team.query.get(team_id)
+    if not team: return jsonify({"error": "Equipo no encontrado"}), 404
+    
+    if team.captain_id != user.id:
+        return jsonify({"error": "Solo el capitán puede disolver el equipo"}), 403
+        
+    db.session.delete(team)
+    db.session.commit()
+    return jsonify({"message": "Equipo disuelto correctamente"})
 
 import os
 from flask import send_from_directory

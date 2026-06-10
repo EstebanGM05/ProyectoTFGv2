@@ -1,5 +1,6 @@
 import os
 import requests
+import urllib.parse
 from functools import lru_cache
 from dotenv import load_dotenv
 
@@ -21,13 +22,19 @@ def get_routing_region(match_id_or_platform):
     if prefix in ['OC1', 'PH2', 'SG2', 'TH2', 'TW2', 'VN2']: return 'sea'
     return 'europe'
 
-@lru_cache(maxsize=128)
+@lru_cache(maxsize=512)
 def get_puuid(game_name, tag_line):
     """
     Get the PUUID for a given Riot ID (GameName#TagLine).
     Endpoint: /riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}
     """
-    url = f"https://{REGION_ACCOUNT}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
+    if tag_line.startswith('#'):
+        tag_line = tag_line[1:]
+        
+    encoded_name = urllib.parse.quote(game_name, safe='')
+    encoded_tag = urllib.parse.quote(tag_line, safe='')
+    
+    url = f"https://{REGION_ACCOUNT}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{encoded_name}/{encoded_tag}"
     response = requests.get(url, headers=HEADERS)
     
     if response.status_code == 200:
@@ -35,6 +42,8 @@ def get_puuid(game_name, tag_line):
     return None
 
 def get_platform_routing(tag_line):
+    if tag_line.startswith('#'):
+        tag_line = tag_line[1:]
     t = tag_line.upper()
     if t in ['EUW', 'EUW1']: return 'euw1'
     if t in ['NA', 'NA1']: return 'na1'
@@ -49,6 +58,43 @@ def get_platform_routing(tag_line):
     if t in ['JP', 'JP1']: return 'jp1'
     return 'euw1' # Fallback
 
+@lru_cache(maxsize=512)
+def get_summoner_rank(puuid, tag_line="EUW"):
+    """
+    Get the highest rank (Solo/Duo or Flex) for a given PUUID.
+    Requires an extra step to get the summonerId first.
+    """
+    platform = get_platform_routing(tag_line)
+    
+    # 1. Get Summoner ID from PUUID
+    summoner_url = f"https://{platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}"
+    sum_resp = requests.get(summoner_url, headers=HEADERS)
+    if sum_resp.status_code != 200:
+        return "UNRANKED"
+        
+    summoner_id = sum_resp.json().get("id")
+    if not summoner_id:
+        return "UNRANKED"
+        
+    # 2. Get League Entries
+    league_url = f"https://{platform}.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
+    league_resp = requests.get(league_url, headers=HEADERS)
+    
+    if league_resp.status_code == 200:
+        entries = league_resp.json()
+        if not entries:
+            return "UNRANKED"
+            
+        # Prioritize Solo/Duo queue
+        solo_q = next((e for e in entries if e.get("queueType") == "RANKED_SOLO_5x5"), None)
+        if solo_q:
+            return f"{solo_q.get('tier')} {solo_q.get('rank')}"
+            
+        # Fallback to any other queue
+        return f"{entries[0].get('tier')} {entries[0].get('rank')}"
+        
+    return "UNRANKED"
+
 @lru_cache(maxsize=1024)
 def get_champion_mastery(puuid, champion_id, tag_line="EUW"):
     """
@@ -62,7 +108,7 @@ def get_champion_mastery(puuid, champion_id, tag_line="EUW"):
         return response.json()
     return None
 
-@lru_cache(maxsize=128)
+@lru_cache(maxsize=512)
 def get_all_champion_masteries(puuid, tag_line="EUW"):
     platform = get_platform_routing(tag_line)
     url = f"https://{platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}"
@@ -86,7 +132,7 @@ def get_matches(puuid, count=10):
     # If all regions fail or return 0, fallback empty
     return []
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=512)
 def get_match_details(match_id):
     """
     Get details for a specific match ID tracking its proper routing region.

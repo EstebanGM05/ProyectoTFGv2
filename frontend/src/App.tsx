@@ -10,14 +10,18 @@ import MatchHistory from './pages/MatchHistory';
 import Friends from './pages/Friends';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import LFG from './pages/LFG';
+import PublicProfile from './pages/PublicProfile';
+import TeamsDashboard from './pages/TeamsDashboard';
+import ClashBoard from './pages/ClashBoard';
 
 function NavLinks() {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   return (
-    <nav className="bg-medium-blue border-b border-border-color shadow-lg sticky top-0 z-[999]">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+    <nav className="bg-dark-blue/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-50 shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         <Link to="/" className="text-gold text-2xl font-bold font-serif hover:text-gold-hover transition z-50">
           LeagueStats
         </Link>
@@ -35,6 +39,8 @@ function NavLinks() {
           <Link to="/" className="text-text-color hover:text-gold transition">Campeones</Link>
           <Link to="/match-history" className="text-text-color hover:text-gold transition">Historial</Link>
           <Link to="/friends" className="text-text-color hover:text-gold transition">Amigos</Link>
+          <Link to="/lfg" className="text-text-color hover:text-gold transition">Buscador Duo</Link>
+          <Link to="/teams" className="text-text-color hover:text-gold transition font-bold">Torneos Qlash</Link>
           <Link to="/favorites" className="text-text-color hover:text-gold transition">Favoritos</Link>
           
           {user && user.is_admin && (
@@ -77,6 +83,8 @@ function NavLinks() {
           <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5">Campeones</Link>
           <Link to="/match-history" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5">Historial</Link>
           <Link to="/friends" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5">Amigos</Link>
+          <Link to="/lfg" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5">Buscador Duo</Link>
+          <Link to="/teams" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5 font-bold">Torneos Qlash</Link>
           <Link to="/favorites" onClick={() => setIsMobileMenuOpen(false)} className="text-text-color hover:text-gold transition block py-2 border-b border-white/5">Favoritos</Link>
           
           {user && user.is_admin && (
@@ -130,6 +138,10 @@ function App() {
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/match-history" element={<MatchHistory />} />
               <Route path="/friends" element={<Friends />} />
+              <Route path="/lfg" element={<LFG />} />
+              <Route path="/teams" element={<TeamsDashboard />} />
+              <Route path="/teams/board" element={<ClashBoard />} />
+              <Route path="/user/:id" element={<PublicProfile />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Routes>

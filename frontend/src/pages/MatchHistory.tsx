@@ -140,6 +140,7 @@ const RANKS = Object.keys(RANK_AVERAGES);
 export default function MatchHistory() {
   const [gameName, setGameName] = useState('');
   const [tagLine, setTagLine] = useState('');
+  const [matchCount, setMatchCount] = useState(20);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [data, setData] = useState<any>(null);
@@ -191,7 +192,8 @@ export default function MatchHistory() {
     try {
       const res = await axios.post('/api/match-history', {
         game_name: name,
-        tag_line: tag
+        tag_line: tag,
+        count: matchCount
       });
       setData(res.data);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -249,6 +251,16 @@ export default function MatchHistory() {
           onChange={e => setTagLine(e.target.value)}
           required
         />
+        <select 
+          className="bg-black/40 border-2 border-white/10 rounded-xl p-3 text-white focus:border-gold outline-none transition-all font-bold cursor-pointer"
+          value={matchCount}
+          onChange={e => setMatchCount(Number(e.target.value))}
+        >
+          <option value={10}>10 Partidas</option>
+          <option value={20}>20 Partidas</option>
+          <option value={50}>50 Partidas</option>
+          <option value={100}>100 Partidas</option>
+        </select>
         <button type="submit" className="bg-gradient-to-r from-gold to-yellow-500 text-dark-blue font-black px-8 py-3 rounded-xl hover:scale-105 transition-transform shadow-lg disabled:opacity-50" disabled={loading}>
           {loading ? 'Buscando...' : 'Buscar'}
         </button>
@@ -284,7 +296,27 @@ export default function MatchHistory() {
 
       {error && <div className="bg-loss/80 border-2 border-loss-border text-white font-bold p-4 rounded-xl mb-8 text-center">{error}</div>}
 
-      {data && (
+      {loading ? (
+        <div className="space-y-4 max-w-4xl mx-auto mt-8">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col border-l-4 rounded-xl shadow-lg bg-gray-900/50 border-gray-700/50 p-4 animate-pulse mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                <div className="flex items-center w-full sm:w-auto mb-3 sm:mb-0">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gray-700 mr-4"></div>
+                  <div className="space-y-2">
+                    <div className="h-5 bg-gray-700 rounded w-32"></div>
+                    <div className="h-4 bg-gray-700 rounded w-24"></div>
+                  </div>
+                </div>
+                <div className="sm:ml-auto w-full sm:w-auto mt-4 sm:mt-0 space-y-2 text-right">
+                  <div className="h-5 bg-gray-700 rounded w-20 sm:ml-auto"></div>
+                  <div className="h-4 bg-gray-700 rounded w-16 sm:ml-auto"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : data ? (
         <div className="space-y-8">
           {/* Player Header */}
           <div className="bg-gradient-to-r from-dark-blue to-medium-blue border-2 border-border-color p-6 rounded-2xl text-center shadow-lg relative overflow-hidden">
@@ -658,7 +690,7 @@ export default function MatchHistory() {
 
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
