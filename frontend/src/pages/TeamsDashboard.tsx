@@ -56,7 +56,7 @@ export default function TeamsDashboard() {
 
   const fetchTeam = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/teams/my-team', { withCredentials: true });
+      const res = await axios.get('/api/teams/my-team', { withCredentials: true });
       setTeam(res.data);
     } catch (err) {
       console.error(err);
@@ -72,7 +72,7 @@ export default function TeamsDashboard() {
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/teams', { name: teamName, tag: teamTag }, { withCredentials: true });
+      await axios.post('/api/teams', { name: teamName, tag: teamTag }, { withCredentials: true });
       fetchTeam();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error al crear el equipo');
@@ -82,7 +82,7 @@ export default function TeamsDashboard() {
   const handleCreateVacancy = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/teams/vacancies', {
+      await axios.post('/api/teams/vacancies', {
         role: vacancyRole,
         min_rank: vacancyRank,
         message: vacancyMessage
@@ -97,7 +97,7 @@ export default function TeamsDashboard() {
 
   const handleApplication = async (appId: number, action: 'ACCEPT' | 'REJECT') => {
     try {
-      await axios.put(`http://localhost:5000/api/teams/applications/${appId}`, { action }, { withCredentials: true });
+      await axios.put(`/api/teams/applications/${appId}`, { action }, { withCredentials: true });
       fetchTeam();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error al procesar solicitud');
@@ -107,7 +107,7 @@ export default function TeamsDashboard() {
   const handleKick = async (memberId: number) => {
     if (!confirm('¿Seguro que quieres expulsar o salir?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/teams/members/${memberId}`, { withCredentials: true });
+      await axios.delete(`/api/teams/members/${memberId}`, { withCredentials: true });
       fetchTeam();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error');
@@ -118,7 +118,7 @@ export default function TeamsDashboard() {
     if (!team) return;
     if (!confirm('¿ESTÁS SEGURO? Esta acción disolverá el equipo por completo y eliminará todas las vacantes.')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/teams/${team.id}`, { withCredentials: true });
+      await axios.delete(`/api/teams/${team.id}`, { withCredentials: true });
       setTeam(null);
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error al disolver equipo');

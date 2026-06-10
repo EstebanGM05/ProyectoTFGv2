@@ -25,7 +25,7 @@ export default function ClashBoard() {
 
   const fetchVacancies = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/teams/vacancies', { withCredentials: true });
+      const res = await axios.get('/api/teams/vacancies', { withCredentials: true });
       setVacancies(res.data);
     } catch (err) {
       console.error(err);
@@ -41,7 +41,7 @@ export default function ClashBoard() {
   const handleApply = async (e: React.FormEvent, vid: number) => {
     e.preventDefault();
     try {
-      await axios.post(`http://localhost:5000/api/teams/vacancies/${vid}/apply`, { message: applyMessage }, { withCredentials: true });
+      await axios.post(`/api/teams/vacancies/${vid}/apply`, { message: applyMessage }, { withCredentials: true });
       alert('Solicitud enviada al capitán del equipo.');
       setApplyingTo(null);
       setApplyMessage('');
