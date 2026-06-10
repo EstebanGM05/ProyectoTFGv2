@@ -29,7 +29,7 @@ export default function LFG() {
 
   const fetchPosts = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/lfg', { withCredentials: true });
+      const response = await axios.get('/api/lfg', { withCredentials: true });
       setPosts(response.data);
     } catch (err: any) {
       setError('Error al cargar las publicaciones');
@@ -48,7 +48,7 @@ export default function LFG() {
     
     setSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/lfg', { role, message }, { withCredentials: true });
+      await axios.post('/api/lfg', { role, message }, { withCredentials: true });
       setMessage('');
       fetchPosts();
     } catch (err: any) {
@@ -61,7 +61,7 @@ export default function LFG() {
   const handleDelete = async (id: number) => {
     if (!confirm('¿Borrar publicación?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/lfg/${id}`, { withCredentials: true });
+      await axios.delete(`/api/lfg/${id}`, { withCredentials: true });
       fetchPosts();
     } catch (err: any) {
       alert('Error al borrar');

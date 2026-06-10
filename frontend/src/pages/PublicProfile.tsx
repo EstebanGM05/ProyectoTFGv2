@@ -44,7 +44,7 @@ export default function PublicProfile() {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/${id}`);
+      const res = await axios.get(`/api/users/${id}`);
       setProfile(res.data);
     } catch (err: any) {
       setError('No se pudo encontrar el perfil.');
@@ -62,7 +62,7 @@ export default function PublicProfile() {
     if (!commentText.trim()) return;
     setSubmitting(true);
     try {
-      await axios.post(`http://localhost:5000/api/users/${id}/comments`, {
+      await axios.post(`/api/users/${id}/comments`, {
         comment: commentText,
         is_positive: isPositive
       }, { withCredentials: true });
